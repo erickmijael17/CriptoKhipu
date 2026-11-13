@@ -1,0 +1,42 @@
+# Catálogo único de versiones de CryptoKipu.
+# Toda dependencia nueva se declara aquí; los módulos solo usan alias `libs.*`.
+
+[versions]
+java = "25"
+checkstyle = "14.4.0"
+bouncycastle = "1.87"
+javafx = "25.0.5"
+atlantafx = "3.0.0"
+ikonli = "12.4.0"
+picocli = "4.7.7"
+pdfbox = "3.0.8"
+poi = "6.0.0"
+junit = "6.1.3"
+jqwik = "1.10.2"
+archunit = "1.5.1"
+
+[libraries]
+# Criptografía (Fase 1)
+bouncycastle-prov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
+
+# Interfaz (Fase 6)
+atlantafx = { module = "io.github.mkpaz:atlantafx-base", version.ref = "atlantafx" }
+ikonli-javafx = { module = "org.kordamp.ikonli:ikonli-javafx", version.ref = "ikonli" }
+ikonli-feather = { module = "org.kordamp.ikonli:ikonli-feather-pack", version.ref = "ikonli" }
+
+# Línea de comandos (Fase 5)
+picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
+
+# Vista previa (Fase 7)
+pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
+poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poi" }
+
+# Pruebas
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+jqwik = { module = "net.jqwik:jqwik", version.ref = "jqwik" }
+archunit-junit = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+
+[plugins]
+javafx = { id = "org.openjfx.javafxplugin", version = "0.1.0" }

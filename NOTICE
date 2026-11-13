@@ -1,0 +1,16 @@
+CryptoKipu
+Licenciado bajo Apache License 2.0 (ver LICENSE).
+
+Este producto incluye o incluirá software de terceros:
+
+- Bouncy Castle (bcprov-jdk18on)       — Bouncy Castle License (MIT)   https://www.bouncycastle.org
+- OpenJFX / JavaFX                     — GPLv2 + Classpath Exception   https://openjfx.io
+- AtlantaFX                            — MIT                           https://github.com/mkpaz/atlantafx
+- Ikonli                               — Apache License 2.0            https://kordamp.org/ikonli
+- picocli                              — Apache License 2.0            https://picocli.info
+- Apache PDFBox                        — Apache License 2.0            https://pdfbox.apache.org
+- Apache POI                           — Apache License 2.0            https://poi.apache.org
+
+Solo para pruebas (no se distribuyen): JUnit (EPL-2.0), jqwik (EPL-2.0), ArchUnit (Apache-2.0).
+
+Los textos completos de cada licencia se incluirán en la imagen distribuida (Fase 10).

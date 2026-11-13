@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+out/
+
+# Datos sensibles: nunca versionar bóvedas, llaves ni tokens
+*.kipu
+*.kipu.tmp
+*.kipu.[0-9][0-9][0-9]
+*.kipukey
+tokens*.txt
+
+# Volcados y logs de la JVM
+hs_err_pid*.log
+*.hprof
+# Core dumps solo en la raíz (un "core" a secas ignoraría el paquete .../cryptokipu/core/)
+/core
+/core.[0-9]*
