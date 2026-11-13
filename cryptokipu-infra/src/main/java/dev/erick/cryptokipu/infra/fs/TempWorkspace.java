@@ -38,6 +38,8 @@ public final class TempWorkspace implements AutoCloseable {
 
     public static final String PREFIJO_MIJA = "cryptokipu-tmp-";
     private static final String BLOQUEO_MIJA = ".bloqueo";
+    private static final int INTENTOS_BORRADO_MIJA = 5;
+    private static final java.time.Duration PAUSA_BORRADO_MIJA = java.time.Duration.ofMillis(200);
     private static final System.Logger REGISTRO_MIJA = Registro.para(TempWorkspace.class);
 
     private final Path carpetaMija;
@@ -106,10 +108,28 @@ public final class TempWorkspace implements AutoCloseable {
         try {
             bloqueoMija.release();
             canalBloqueoMija.close();
-            borrarRecursivo(carpetaMija);
         } catch (IOException _) {
-            REGISTRO_MIJA.log(System.Logger.Level.WARNING, "No se pudo borrar la carpeta temporal privada");
+            // Sin bloqueo la carpeta queda "abandonada": la limpia el próximo inicio aunque falle el borrado.
         }
+        // En Windows la aplicación externa puede tener el archivo abierto: se reintenta unos instantes y, si
+        // sigue bloqueado, la carpeta (ya sin .bloqueo activo) se borra con limpiarRestos al próximo inicio.
+        for (int intentoMija = 1; intentoMija <= INTENTOS_BORRADO_MIJA; intentoMija++) {
+            try {
+                borrarRecursivo(carpetaMija);
+                return;
+            } catch (IOException _) {
+                if (intentoMija < INTENTOS_BORRADO_MIJA) {
+                    try {
+                        Thread.sleep(PAUSA_BORRADO_MIJA);
+                    } catch (InterruptedException _) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+        REGISTRO_MIJA.log(System.Logger.Level.WARNING,
+                "No se pudo borrar la carpeta temporal privada (archivo en uso); se limpiará al próximo inicio");
     }
 
     private void exigirAbierto() {

@@ -25,4 +25,16 @@ object OpcionesJvm {
         "-XX:ErrorFile=$carpeta/logs/hs_err_%p.log",
         "-Djava.io.tmpdir=$carpeta/tmp",
     )
+
+    /**
+     * Opciones de `jpackage --java-options` del modo portátil (plan, Fase 7.4). `$APPDIR` lo expande el lanzador
+     * de jpackage (en una línea de comandos hay que escaparlo: `\$APPDIR`). Todo lo que la JVM pueda escribir
+     * (temporales, log de caídas) queda junto a la app, nunca en el anfitrión.
+     */
+    val portatil: List<String> = comunes + listOf(
+        "-XX:ErrorFile=\$APPDIR/logs/hs_err_%p.log",
+        "-Djava.io.tmpdir=\$APPDIR/tmp",
+        "-Djava.awt.headless=true",        // Java2D de PDFBox/POI sin pantalla; JavaFX no depende de AWT
+        "-Dcryptokipu.appdir=\$APPDIR",    // la app busca portable.properties aquí y en la carpeta superior
+    )
 }

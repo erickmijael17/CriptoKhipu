@@ -24,6 +24,7 @@ import dev.erick.cryptokipu.core.auth.TokenRecuperacion;
 import dev.erick.cryptokipu.core.error.ErrorBoveda;
 import dev.erick.cryptokipu.core.format.EntradaManifest;
 import dev.erick.cryptokipu.core.progreso.ReporteProgreso;
+import dev.erick.cryptokipu.infra.fs.ColocadorSeguro;
 import dev.erick.cryptokipu.infra.storage.ContenedorKipu;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -307,6 +308,28 @@ class ArchivosTest {
 
             extraer(sesionMija, destinoMija, PoliticaColision.REEMPLAZAR);
             assertArrayEquals(Files.readAllBytes(origenMija), Files.readAllBytes(destinoMija.resolve("d.txt")));
+        }
+    }
+
+    @Test
+    void destinoCreadoEntreLaComprobacionYElRenombradoQuedaIntacto() throws IOException {
+        bancoMija.crear();
+        Path origenMija = bancoMija.archivo("carrera.txt", 40);
+        Path destinoMija = carpetaMija.resolve("salida");
+        ColocadorSeguro realMija = new ColocadorSeguro();
+        ExtraerArchivo conCarreraMija = new ExtraerArchivo((parcialMija, finalMija, reemplazarMija) -> {
+            Files.writeString(finalMija, "intruso"); // aparece después de la comprobación de colisión
+            return realMija.colocar(parcialMija, finalMija, reemplazarMija);
+        });
+        try (SesionBoveda sesionMija = bancoMija.abrir()) {
+            agregar(sesionMija, List.of(origenMija), PoliticaColision.OMITIR, NADA_MIJA);
+            ExtraerArchivo.Resultado resultadoMija = conCarreraMija.ejecutar(new ExtraerArchivo.Comando(sesionMija,
+                    List.of(), destinoMija, PoliticaColision.OMITIR, NADA_MIJA));
+            assertEquals(ExtraerArchivo.Motivo.YA_EXISTE, resultadoMija.rechazadosMija().getFirst().motivoMija());
+        }
+        assertEquals("intruso", Files.readString(destinoMija.resolve("carrera.txt")));
+        try (var contenidoMija = Files.list(destinoMija)) {
+            assertEquals(1, contenidoMija.count(), "sin .part sobrante");
         }
     }
 

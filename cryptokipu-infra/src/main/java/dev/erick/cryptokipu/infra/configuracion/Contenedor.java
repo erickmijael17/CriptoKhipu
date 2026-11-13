@@ -14,6 +14,7 @@ import dev.erick.cryptokipu.app.casos.RotarCredenciales;
 import dev.erick.cryptokipu.app.casos.VerificarIntegridad;
 import dev.erick.cryptokipu.app.puertos.RepositorioBoveda;
 import dev.erick.cryptokipu.core.crypto.FuenteAleatoria;
+import dev.erick.cryptokipu.infra.fs.ColocadorSeguro;
 import dev.erick.cryptokipu.infra.storage.ContenedorKipu;
 import dev.erick.cryptokipu.infra.storage.RepositorioKipu;
 import java.util.Objects;
@@ -72,7 +73,7 @@ public final class Contenedor {
     }
 
     public ExtraerArchivo extraerArchivo() {
-        return new ExtraerArchivo();
+        return new ExtraerArchivo(new ColocadorSeguro());
     }
 
     public AbrirEnMemoria abrirEnMemoria() {

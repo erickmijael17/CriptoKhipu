@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" spacing="12" maxWidth="560"
+      fx:controller="dev.erick.cryptokipu.ui.vista.AjustesController">
+    <Label text="%ajustes.titulo" styleClass="title-2"/>
+    <Label text="%ajustes.tema" styleClass="title-4"/>
+    <ComboBox fx:id="temaMija" accessibleText="%ajustes.tema"/>
+    <Label text="%ajustes.idioma" styleClass="title-4"/>
+    <ComboBox fx:id="idiomaMija" accessibleText="%ajustes.idioma"/>
+    <CheckBox fx:id="recientesMija" text="%ajustes.recientes"/>
+    <CheckBox fx:id="autobloqueoMija" text="%ajustes.autobloqueo" disable="true"/>
+    <Label fx:id="mensajeMija" styleClass="text-muted" wrapText="true"/>
+</VBox>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" spacing="16"
+      fx:controller="dev.erick.cryptokipu.ui.vista.InicioController">
+    <Label text="%inicio.titulo" styleClass="title-1" wrapText="true"/>
+    <Label text="%inicio.subtitulo" styleClass="text-muted" wrapText="true"/>
+    <HBox spacing="12">
+        <Button fx:id="crearMija" text="%inicio.crear" onAction="#crear" mnemonicParsing="true"
+                styleClass="accent" defaultButton="true"/>
+        <Button fx:id="abrirMija" text="%inicio.abrir" onAction="#abrir" mnemonicParsing="true"/>
+    </HBox>
+    <VBox fx:id="zonaSoltarMija" styleClass="zona-soltar" alignment="CENTER">
+        <Label text="%inicio.soltar" styleClass="text-muted"/>
+    </VBox>
+    <Label text="%inicio.recientes" styleClass="title-4"/>
+    <ListView fx:id="recientesMija" VBox.vgrow="ALWAYS" accessibleText="%inicio.recientes"/>
+</VBox>

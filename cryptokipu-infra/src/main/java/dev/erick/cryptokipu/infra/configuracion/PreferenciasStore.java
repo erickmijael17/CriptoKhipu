@@ -23,12 +23,14 @@ import java.util.Properties;
  */
 public final class PreferenciasStore {
 
-    public enum Clave { TEMA, IDIOMA, AUTO_BLOQUEO_MINUTOS, PERFIL_ARGON2, RECIENTES }
+    public enum Clave { TEMA, IDIOMA, AUTO_BLOQUEO_MINUTOS, PERFIL_ARGON2, RECIENTES, RECIENTES_ACTIVOS }
 
     private static final String ARCHIVO_MIJA = "preferencias.properties";
     private static final int MAXIMO_RECIENTES_MIJA = 10;
 
+    /** {@code null} en modo portátil sin guardar: las preferencias viven solo en memoria. */
     private final Path archivoMija;
+    private final Properties memoriaMija = new Properties();
 
     private PreferenciasStore(Path archivoMija) {
         this.archivoMija = archivoMija;
@@ -42,6 +44,15 @@ public final class PreferenciasStore {
     /** Modo portátil: junto a la app, en el USB; no deja nada en el equipo anfitrión. */
     public static PreferenciasStore portatil(Path carpetaAppMija) {
         return new PreferenciasStore(carpetaAppMija.resolve(ARCHIVO_MIJA));
+    }
+
+    /** Modo portátil con {@code guardarPreferencias=false}: nada se escribe en ningún disco. */
+    public static PreferenciasStore enMemoria() {
+        return new PreferenciasStore(null);
+    }
+
+    public boolean persistente() {
+        return archivoMija != null;
     }
 
     public Optional<String> leer(Clave claveMija) throws IOException {
@@ -61,6 +72,20 @@ public final class PreferenciasStore {
         escribir(propiedadesMija);
     }
 
+    /** Recordar bóvedas recientes (por defecto sí). Al desactivarlo se borra la lista. */
+    public boolean recientesActivos() throws IOException {
+        return !leer(Clave.RECIENTES_ACTIVOS).map("false"::equals).orElse(false);
+    }
+
+    public void activarRecientes(boolean activoMija) throws IOException {
+        Properties propiedadesMija = cargar();
+        propiedadesMija.setProperty(nombre(Clave.RECIENTES_ACTIVOS), Boolean.toString(activoMija));
+        if (!activoMija) {
+            propiedadesMija.remove(nombre(Clave.RECIENTES));
+        }
+        escribir(propiedadesMija);
+    }
+
     public List<Path> recientes() throws IOException {
         return leer(Clave.RECIENTES).map(valorMija -> Arrays.stream(valorMija.split("\\|"))
                 .filter(textoMija -> !textoMija.isBlank()).map(Path::of).toList()).orElse(List.of());
@@ -68,6 +93,9 @@ public final class PreferenciasStore {
 
     /** Agrega la ruta de una bóveda {@code .kipu} al principio de la lista de recientes (máximo 10). */
     public void agregarReciente(Path bovedaMija) throws IOException {
+        if (!recientesActivos()) {
+            return;
+        }
         String rutaMija = bovedaMija.toAbsolutePath().normalize().toString();
         if (!rutaMija.toLowerCase(Locale.ROOT).endsWith(".kipu") || rutaMija.contains("|")) {
             throw new IllegalArgumentException("Solo se recuerdan rutas de archivos .kipu");
@@ -83,7 +111,9 @@ public final class PreferenciasStore {
 
     private Properties cargar() throws IOException {
         Properties propiedadesMija = new Properties();
-        if (Files.exists(archivoMija)) {
+        if (archivoMija == null) {
+            propiedadesMija.putAll(memoriaMija);
+        } else if (Files.exists(archivoMija)) {
             try (InputStream entradaMija = Files.newInputStream(archivoMija)) {
                 propiedadesMija.load(entradaMija);
             }
@@ -95,6 +125,11 @@ public final class PreferenciasStore {
     }
 
     private void escribir(Properties propiedadesMija) throws IOException {
+        if (archivoMija == null) {
+            memoriaMija.clear();
+            memoriaMija.putAll(propiedadesMija);
+            return;
+        }
         Files.createDirectories(archivoMija.getParent());
         Path temporalMija = archivoMija.resolveSibling(ARCHIVO_MIJA + ".tmp");
         try (OutputStream salidaMija = Files.newOutputStream(temporalMija)) {

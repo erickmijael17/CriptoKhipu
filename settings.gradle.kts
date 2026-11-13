@@ -11,6 +11,7 @@ include(
     "cryptokipu-infra",
     "cryptokipu-ui",
     "cryptokipu-cli",
+    "cryptokipu-visores",
     "cryptokipu-arquitectura",
 )
 

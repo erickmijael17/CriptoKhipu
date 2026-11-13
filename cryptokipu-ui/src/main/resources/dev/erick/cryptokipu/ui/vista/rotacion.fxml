@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" spacing="12" styleClass="tarjeta"
+      maxWidth="620" prefWidth="620" maxHeight="660"
+      fx:controller="dev.erick.cryptokipu.ui.vista.RotacionController">
+    <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
+    <Label fx:id="tituloMija" styleClass="title-3"/>
+    <Label fx:id="ayudaMija" wrapText="true" minHeight="-Infinity"/>
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="edge-to-edge">
+        <VBox spacing="14">
+            <padding><Insets right="12"/></padding>
+            <VBox fx:id="selectoresMija" spacing="6">
+                <CheckBox fx:id="cambiaF1Mija" text="%seguridad.cambiar.f1"/>
+                <CheckBox fx:id="cambiaF2Mija" text="%seguridad.cambiar.f2"/>
+                <CheckBox fx:id="cambiaF3Mija" text="%seguridad.cambiar.f3"/>
+            </VBox>
+            <VBox fx:id="camposMija" spacing="18"/>
+            <Label text="%rotacion.llave" styleClass="title-4"/>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <ComboBox fx:id="llaveMija"/>
+                <Button fx:id="elegirLlaveMija" text="%asistente.llave.elegir" onAction="#elegirLlave"/>
+                <Label fx:id="llaveElegidaMija" styleClass="text-muted"/>
+            </HBox>
+            <VBox fx:id="vigentesMija"/>
+        </VBox>
+    </ScrollPane>
+    <Label fx:id="errorMija" styleClass="error-credenciales" wrapText="true"/>
+    <HBox spacing="8">
+        <Button fx:id="cancelarMija" text="%credenciales.cancelar" onAction="#cancelar" cancelButton="true"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="guardarMija" text="%rotacion.guardar" onAction="#guardar" mnemonicParsing="true"
+                styleClass="accent" defaultButton="true"/>
+    </HBox>
+</VBox>

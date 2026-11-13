@@ -10,6 +10,15 @@ Este producto incluye o incluirá software de terceros:
 - picocli                              — Apache License 2.0            https://picocli.info
 - Apache PDFBox                        — Apache License 2.0            https://pdfbox.apache.org
 - Apache POI                           — Apache License 2.0            https://poi.apache.org
+    Dependencias que arrastra POI (solo en el módulo opcional cryptokipu-visores):
+    - Apache XMLBeans (xmlbeans)         — Apache License 2.0            https://xmlbeans.apache.org
+    - Apache Commons Compress            — Apache License 2.0            https://commons.apache.org/proper/commons-compress
+    - Apache Commons IO / Codec / Lang3 / Collections4 / Math3 — Apache License 2.0   https://commons.apache.org
+    - Apache Log4j API (log4j-api)       — Apache License 2.0            https://logging.apache.org/log4j
+    - SparseBitSet (com.zaxxer)          — Apache License 2.0            https://github.com/brettwooldridge/SparseBitSet
+    - curvesapi (com.github.virtuald)    — BSD 3-Clause                  https://github.com/virtuald/curvesapi
+    - poi-ooxml-lite                     — Apache License 2.0            https://poi.apache.org
+    Dependencias que arrastra PDFBox: fontbox, pdfbox-io, Apache Commons Logging (Apache License 2.0).
 
 Solo para pruebas (no se distribuyen): JUnit (EPL-2.0), jqwik (EPL-2.0), ArchUnit (Apache-2.0).
 

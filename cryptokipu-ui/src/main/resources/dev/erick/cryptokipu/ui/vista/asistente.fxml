@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" spacing="12"
+      fx:controller="dev.erick.cryptokipu.ui.vista.AsistenteController">
+    <HBox spacing="12" alignment="BASELINE_LEFT">
+        <Label text="%asistente.titulo" styleClass="title-2"/>
+        <Label fx:id="indicadorPasoMija" styleClass="text-muted"/>
+    </HBox>
+
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="edge-to-edge">
+        <StackPane fx:id="pasosMija">
+            <VBox fx:id="pasoArchivosMija" spacing="10">
+                <Label text="%asistente.archivos.titulo" styleClass="title-4"/>
+                <Label text="%asistente.archivos.ayuda" wrapText="true" styleClass="text-muted"/>
+                <HBox spacing="8">
+                    <Button text="%asistente.archivos.agregarArchivos" onAction="#agregarArchivos"/>
+                    <Button text="%asistente.archivos.agregarCarpeta" onAction="#agregarCarpeta"/>
+                    <Button fx:id="quitarMija" text="%asistente.archivos.quitar" onAction="#quitarArchivo"/>
+                </HBox>
+                <ListView fx:id="archivosMija" prefHeight="300" styleClass="zona-soltar"/>
+            </VBox>
+            <VBox fx:id="pasoF1Mija"/>
+            <VBox fx:id="pasoF2Mija"/>
+            <VBox fx:id="pasoF3Mija"/>
+            <VBox fx:id="pasoLlaveMija" spacing="10">
+                <fx:define>
+                    <ToggleGroup fx:id="grupoLlaveMija"/>
+                </fx:define>
+                <Label text="%asistente.llave.titulo" styleClass="title-4"/>
+                <RadioButton fx:id="sinLlaveMija" text="%asistente.llave.sin" toggleGroup="$grupoLlaveMija"/>
+                <RadioButton fx:id="llaveArchivoMija" text="%asistente.llave.archivo" toggleGroup="$grupoLlaveMija"/>
+                <RadioButton fx:id="llaveGenerarMija" text="%asistente.llave.generar" toggleGroup="$grupoLlaveMija"/>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Button fx:id="elegirLlaveMija" text="%asistente.llave.elegir" onAction="#elegirLlave"/>
+                    <Label fx:id="llaveElegidaMija" styleClass="text-muted"/>
+                </HBox>
+                <Label text="%asistente.llave.recompresion" wrapText="true" styleClass="aviso"/>
+            </VBox>
+            <VBox fx:id="pasoPerfilMija" spacing="10">
+                <fx:define>
+                    <ToggleGroup fx:id="grupoPerfilMija"/>
+                </fx:define>
+                <Label text="%asistente.perfil.titulo" styleClass="title-4"/>
+                <VBox fx:id="perfilesMija" spacing="6"/>
+                <Label fx:id="ramMija" wrapText="true"/>
+                <Label fx:id="avisoLigeroMija" text="%asistente.perfil.ligero" wrapText="true" styleClass="aviso"/>
+            </VBox>
+            <VBox fx:id="pasoDestinoMija" spacing="10">
+                <Label text="%asistente.destino.titulo" styleClass="title-4"/>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Button text="%asistente.destino.elegir" onAction="#elegirDestino"/>
+                    <Label fx:id="destinoElegidoMija" wrapText="true"/>
+                </HBox>
+                <VBox fx:id="avisosMija" spacing="6"/>
+            </VBox>
+            <VBox fx:id="pasoResumenMija" spacing="8">
+                <Label text="%asistente.resumen.titulo" styleClass="title-4"/>
+                <Label fx:id="resumenMija" wrapText="true"/>
+            </VBox>
+        </StackPane>
+    </ScrollPane>
+
+    <HBox spacing="8">
+        <Button text="%asistente.cancelar" onAction="#cancelar" cancelButton="true"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="atrasMija" text="%asistente.atras" onAction="#atras" mnemonicParsing="true"/>
+        <Button fx:id="siguienteMija" text="%asistente.siguiente" onAction="#siguiente" mnemonicParsing="true"
+                styleClass="accent" defaultButton="true"/>
+    </HBox>
+</VBox>

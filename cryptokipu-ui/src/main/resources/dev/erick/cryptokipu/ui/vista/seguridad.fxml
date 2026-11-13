@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" spacing="14" maxWidth="640"
+      fx:controller="dev.erick.cryptokipu.ui.vista.SeguridadController">
+    <Label text="%seguridad.titulo" styleClass="title-2"/>
+
+    <Label text="%seguridad.credenciales" styleClass="title-4"/>
+    <Label text="%seguridad.credenciales.ayuda" wrapText="true" styleClass="text-muted"/>
+    <HBox spacing="8">
+        <Button fx:id="cambiarMija" text="%seguridad.cambiar" onAction="#cambiar"/>
+        <Button fx:id="regenerarMija" text="%seguridad.regenerar" onAction="#regenerar"/>
+    </HBox>
+    <Separator/>
+
+    <Label text="%seguridad.umbral" wrapText="true" styleClass="title-4"/>
+    <Label text="%seguridad.umbral.ayuda" wrapText="true" styleClass="text-muted"/>
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Spinner fx:id="umbralMija" editable="true" prefWidth="110"/>
+        <Button fx:id="aplicarUmbralMija" text="%seguridad.umbral.aplicar" onAction="#aplicarUmbral"/>
+    </HBox>
+    <Separator/>
+
+    <Label text="%seguridad.mantenimiento" styleClass="title-4"/>
+    <HBox spacing="8">
+        <Button fx:id="verificarMija" text="%seguridad.verificar" onAction="#verificar" mnemonicParsing="true"/>
+        <Button fx:id="compactarMija" text="%seguridad.compactar" onAction="#compactar"/>
+    </HBox>
+    <Label fx:id="resultadoMija" wrapText="true"/>
+</VBox>

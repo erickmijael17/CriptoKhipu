@@ -400,6 +400,7 @@ kipu verify  boveda.kipu
 kipu compact boveda.kipu
 ```
 - Las contraseñas se leen con `Console.readPassword()` (`char[]`), nunca como argumentos de línea de comandos.
+- *(Implementación)* Subcomandos `create, info, list, add, extract, verify, compact, recover, rotate, tokens, keyfile`. Secretos detrás del puerto `LectorSecretos` (consola o `--secretos-stdin` con `--secretos-charset`, UTF-8 por defecto). `--f1/--f2/--f3` son interruptores sin valor; una prueba estructural verifica que solo opciones no secretas aceptan valor. Tokens solo a `--tokens-out` o a una TTY. Códigos de salida 0–9 y 130; mensajes del `CatalogoMensajes` compartido con la UI. Ctrl+C: el shutdown hook cancela, espera la limpieza y sale con 130. Hacia tuberías la salida va en UTF-8. Perfil extra `ligero` (64 MiB). Probado como subproceso y como imagen jlink. Docs: `./gradlew :cryptokipu-cli:generarDocsCli`.
 
 **Criterio de salida:** guion de prueba que ejecuta el ciclo completo y compara hashes de los archivos originales y extraídos.
 
@@ -426,6 +427,13 @@ Detalles:
 - Advertencia sobre la recompresión de imágenes al elegir la llave.
 - **Perfil Argon2:** *"Perfil Paranoico: necesitará ~1.5 GB de RAM libre en cualquier equipo donde la abras."* Por defecto, Estándar.
 - **Carpetas sincronizadas:** si la bóveda está dentro de una carpeta de Drive, OneDrive o Dropbox conocida, avisar: *"Cierra la bóveda antes de que se sincronice."*
+
+- *(Implementación)* Shell con `ModalPane` de AtlantaFX (sin animaciones, para que un modal reemplace a otro), vistas cacheadas que se cargan al usarlas y `controllerFactory(contenedorMija::obtener)`. Diferencias con lo planeado:
+  - **AtlantaFX 2.1.0**, no 3.0.0: la 3.0.0 se compiló contra OpenJFX 27 y falla con JavaFX 25 (ADR-013).
+  - Los tokens se muestran **después** de crear (modal persistente), no como un paso previo al resumen: se generan al crear la bóveda.
+  - Vista previa solo de imágenes y texto; PDF, Office y medios quedan para la Fase 7.
+  - Idioma: solo español, porque `CatalogoMensajes` aún no tiene traducción.
+  - Pruebas: ViewModels sin toolkit + `ToolkitFxTest` con pantalla (Xvfb en la CI de Linux) + lista manual en `docs/PRUEBAS_UI.md`. Capturas en `docs/capturas/` con `./gradlew :cryptokipu-ui:generarCapturas`.
 
 **Criterio de salida:** un usuario crea una bóveda con un video, una foto, un Word y un Excel, la cierra y la vuelve a abrir desde la UI.
 
@@ -489,6 +497,17 @@ Detalles:
 - `failCounter` y autodestrucción: un atacante con una copia los evita; la defensa real es el costo de Argon2id.
 
 **Criterio de salida:** desde un USB, en un segundo equipo, se ven una foto, un PDF y un Word, y se reproduce un MP4. Al cerrar no queda ningún archivo nuevo en `%TEMP%`, `~/.openjfx` ni el perfil del usuario (verificado con una comparación del directorio antes y después).
+
+
+#### Estado de la Fase 7 (implementada, sin commit)
+- **Módulo `cryptokipu-visores`** (opcional, `ServiceLoader`): PDFBox 3.0.8 y POI 5.5.1; `extra-java-module-info` les da `module-info`; `verificarImagenJlink` los abre dentro de una imagen jlink. Checksums y locks actualizados; dependencias de POI/PDFBox en `NOTICE`.
+- **Visores en RAM:** imágenes (≤ 100 MP, dimensiones leídas de la cabecera), texto ≤ 10 MB, PDF (caché en memoria, páginas bajo demanda), Word/Excel (texto), PowerPoint (diapositivas con Java2D → `WritableImage` sin `javafx.swing`). `ImageIO.setUseCache(false)`, POI con estrategia de temporales que lanza, `ZipSecureFile` contra bombas.
+- **Servidor de medios** (`ui.medios`): `127.0.0.1`, puerto aleatorio, token de 256 bits, solo `GET`, `Range`; probado con `HttpClient` y con `MediaPlayer` real (WAV generado).
+- **Abrir con aplicación externa:** confirmación con advertencia, copia en `TempWorkspace`, borrado al cerrar la sesión (reintentos y limpieza al próximo inicio).
+- **Modo portátil:** `portable.properties`, preferencias junto a la app o en memoria, `tmp`/`logs` junto a la app, `tmp` se vacía al cerrar, opciones de JVM para `jpackage` (`opcionesJpackage`), regla ArchUnit contra `java.util.prefs`.
+- **Reglas nuevas de ArchUnit:** red solo en `ui.medios` (`URI`/`URL` son tipos de valor y se permiten), PDFBox/POI solo en `visores`.
+- **Ajuste de la Fase 6:** la guardia de hilo usa `Platform.isFxApplicationThread()` con el toolkit iniciado (nombre del hilo solo como respaldo de pruebas).
+- **Pendiente manual:** reproducir un MP4 H.264 real con la ventana (la prueba automática usa un WAV, porque no hay codificador de MP4 en el repositorio), y la prueba de «sin rastros» en un USB y un segundo equipo real (checklist de `docs/PRUEBAS_UI.md`).
 
 ---
 

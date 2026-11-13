@@ -31,5 +31,11 @@ jobs:
         if: runner.os != 'Windows'
         run: chmod +x ./gradlew
 
+      # JavaFX 25 no tiene modo sin pantalla: en Linux las pruebas del toolkit (ToolkitFxTest) corren en Xvfb.
       - name: Build y verificaciones (Checkstyle Mija, ArchUnit, pruebas)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum ./gradlew check --console=plain
+
+      - name: Build y verificaciones (Checkstyle Mija, ArchUnit, pruebas)
+        if: runner.os != 'Linux'
         run: ./gradlew check --console=plain

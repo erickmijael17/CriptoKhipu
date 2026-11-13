@@ -27,6 +27,21 @@ public final class LlaveSeguridad {
         }
     }
 
+    /**
+     * Huella (32 B) como arreglo simple, para adaptadores de entrada que no deben usar tipos de {@code core.crypto}.
+     * Quien llama la borra con {@code Arrays.fill} (normalmente al cerrar las {@code Credenciales} que la reciben).
+     */
+    public static byte[] huellaBytes(Path archivoMija, ReporteProgreso progresoMija) throws IOException {
+        try (SecureBytes huellaMija = huella(archivoMija, progresoMija)) {
+            return huellaMija.bytes().clone();
+        }
+    }
+
+    /** Genera una llave {@code .kipukey} con la aleatoriedad del sistema. */
+    public static Path generar(Path destinoMija) throws IOException {
+        return generar(destinoMija, FuenteAleatoria.delSistema());
+    }
+
     /** Genera una llave {@code .kipukey} de 64 bytes aleatorios. No sobrescribe archivos existentes. */
     public static Path generar(Path destinoMija, FuenteAleatoria fuenteMija) throws IOException {
         byte[] llaveMija = KeyfileDigest.generarLlave(fuenteMija);

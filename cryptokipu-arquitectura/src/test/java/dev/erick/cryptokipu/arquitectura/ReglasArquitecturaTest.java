@@ -3,7 +3,10 @@ package dev.erick.cryptokipu.arquitectura;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import dev.erick.cryptokipu.core.crypto.ParametrosArgon2;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
@@ -77,9 +80,12 @@ class ReglasArquitecturaTest {
 
     @Test
     void laInterfazNoTocaCriptografiaDirectamente() {
-        ArchRule reglaMija = noClasses().that().resideInAnyPackage(UI_MIJA, CLI_MIJA)
-                .should().dependOnClassesThat()
+        // ParametrosArgon2 es un valor de la API de los casos de uso (el perfil elegido al crear), no una primitiva.
+        DescribedPredicate<JavaClass> criptografiaMija = JavaClass.Predicates
                 .resideInAnyPackage("dev.erick.cryptokipu.core.crypto..", "javax.crypto..", "org.bouncycastle..")
+                .and(DescribedPredicate.not(JavaClass.Predicates.equivalentTo(ParametrosArgon2.class)));
+        ArchRule reglaMija = noClasses().that().resideInAnyPackage(UI_MIJA, CLI_MIJA)
+                .should().dependOnClassesThat(criptografiaMija)
                 .because("la UI solo llama a casos de uso")
                 .allowEmptyShould(true);
         reglaMija.check(clasesMija);
@@ -90,6 +96,15 @@ class ReglasArquitecturaTest {
         ArchRule reglaMija = noClasses().that().resideInAnyPackage(CORE_MIJA, APP_MIJA, INFRA_MIJA, UI_MIJA)
                 .should(GeneralCodingRules.ACCESS_STANDARD_STREAMS)
                 .because("política de registro: solo System.Logger vía Registro (la CLI sí imprime)");
+        reglaMija.check(clasesMija);
+    }
+
+    @Test
+    void nadaLeeVariablesDeEntorno() {
+        ArchRule reglaMija = noClasses().that().resideInAPackage("dev.erick.cryptokipu..")
+                .should().callMethod(System.class, "getenv")
+                .orShould().callMethod(System.class, "getenv", String.class)
+                .because("los secretos nunca llegan por variables de entorno (lista de procesos, historial)");
         reglaMija.check(clasesMija);
     }
 
@@ -107,6 +122,48 @@ class ReglasArquitecturaTest {
                 .should().resideInAnyPackage(UI_MIJA, INFRA_MIJA)
                 .because("el streaming local (127.0.0.1) nunca puede estar en core ni en app")
                 .allowEmptyShould(true);
+        reglaMija.check(clasesMija);
+    }
+
+    @Test
+    void laRedYElServidorHttpSoloVivenEnUiMedios() {
+        // URI y URL son tipos de valor (la interfaz los usa para cargar CSS/FXML del classpath y abrir archivos
+        // con HostServices): no abren conexiones. Todo lo demás de java.net es red.
+        DescribedPredicate<JavaClass> redMija = JavaClass.Predicates.resideInAnyPackage("java.net..", "javax.net..",
+                "com.sun.net.httpserver..", "jdk.httpserver..")
+                .and(DescribedPredicate.not(JavaClass.Predicates.equivalentTo(java.net.URI.class)))
+                .and(DescribedPredicate.not(JavaClass.Predicates.equivalentTo(java.net.URL.class)));
+        ArchRule reglaMija = noClasses().that().resideOutsideOfPackage("dev.erick.cryptokipu.ui.medios..")
+                .should().dependOnClassesThat(redMija)
+                .because("el único código con red es el servidor de medios, solo en 127.0.0.1");
+        reglaMija.check(clasesMija);
+    }
+
+    @Test
+    void sinJavaUtilPrefs() {
+        ArchRule reglaMija = noClasses().that().resideInAPackage("dev.erick.cryptokipu..")
+                .should().dependOnClassesThat().resideInAPackage("java.util.prefs..")
+                .because("en Windows java.util.prefs escribe en el registro del anfitrión: las preferencias van a "
+                        + "PreferenciasStore (junto a la app en modo portátil)");
+        reglaMija.check(clasesMija);
+    }
+
+    @Test
+    void soloLosVisoresTocanPdfBoxYPoi() {
+        ArchRule reglaMija = noClasses().that().resideOutsideOfPackage("dev.erick.cryptokipu.visores..")
+                .should().dependOnClassesThat().resideInAnyPackage("org.apache.pdfbox..", "org.apache.poi..")
+                .because("el núcleo no carga PDFBox ni POI: son opcionales y viven en cryptokipu-visores");
+        reglaMija.check(clasesMija);
+    }
+
+    @Test
+    void elModuloDeVisoresNoTocaLaRedNiElDisco() {
+        ArchRule reglaMija = noClasses().that().resideInAPackage("dev.erick.cryptokipu.visores..")
+                .should().dependOnClassesThat().resideInAnyPackage("java.net..", "com.sun.net.httpserver..")
+                .orShould().callMethod(java.io.File.class, "createTempFile", String.class, String.class)
+                .orShould().callMethod(java.nio.file.Files.class, "createTempFile", String.class, String.class,
+                        java.nio.file.attribute.FileAttribute[].class)
+                .because("los visores trabajan solo en RAM");
         reglaMija.check(clasesMija);
     }
 }

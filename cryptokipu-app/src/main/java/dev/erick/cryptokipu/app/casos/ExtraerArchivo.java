@@ -1,5 +1,6 @@
 package dev.erick.cryptokipu.app.casos;
 
+import dev.erick.cryptokipu.app.puertos.ColocadorArchivos;
 import dev.erick.cryptokipu.app.puertos.ContenedorAbierto;
 import dev.erick.cryptokipu.core.error.ErrorBoveda;
 import dev.erick.cryptokipu.core.error.ExcepcionBoveda;
@@ -13,7 +14,6 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
@@ -40,8 +40,10 @@ import java.util.Set;
  */
 public final class ExtraerArchivo {
 
-    public ExtraerArchivo() {
-        // Sin dependencias: opera sobre la sesión del comando.
+    private final ColocadorArchivos colocadorMija;
+
+    public ExtraerArchivo(ColocadorArchivos colocadorMija) {
+        this.colocadorMija = Objects.requireNonNull(colocadorMija, "colocadorMija");
     }
 
     public enum Motivo { RUTA_PELIGROSA, YA_EXISTE, INTEGRIDAD }
@@ -121,19 +123,11 @@ public final class ExtraerArchivo {
                 Files.deleteIfExists(parcialMija);
                 throw errorMija;
             }
-            if (reemplazarMija) {
-                // Con ATOMIC_MOVE, Windows reemplaza el destino (MoveFileEx + MOVEFILE_REPLACE_EXISTING).
-                Files.move(parcialMija, finalMija, StandardCopyOption.ATOMIC_MOVE);
-            } else {
-                // Sin ATOMIC_MOVE: si alguien creó el archivo entre la comprobación y el renombrado, falla en vez
-                // de sobrescribirlo (en Windows, ATOMIC_MOVE siempre reemplaza).
-                try {
-                    Files.move(parcialMija, finalMija);
-                } catch (FileAlreadyExistsException _) {
-                    Files.deleteIfExists(parcialMija);
-                    rechazadosMija.add(new Rechazado(rutaMija, Motivo.YA_EXISTE));
-                    continue;
-                }
+            // El colocador nunca pisa un archivo sin REEMPLAZAR, ni uno creado justo después de la comprobación.
+            if (!colocadorMija.colocar(parcialMija, finalMija, reemplazarMija)) {
+                Files.deleteIfExists(parcialMija);
+                rechazadosMija.add(new Rechazado(rutaMija, Motivo.YA_EXISTE));
+                continue;
             }
             Files.setLastModifiedTime(finalMija, FileTime.fromMillis(entradaMija.modificadoMija()));
             extraidosMija.add(new Extraido(rutaMija, finalMija));
