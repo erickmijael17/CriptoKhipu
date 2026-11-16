@@ -8,12 +8,16 @@ import dev.erick.cryptokipu.ui.viewmodel.AjustesViewModel;
 import java.io.IOException;
 import java.util.function.Function;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 
-/** Ajustes: tema (aplicado al instante), idioma (al reiniciar), recientes y bloqueo automático (próxima versión). */
+/** Ajustes: tema (aplicado al instante), idioma (al reiniciar), recientes, bloqueo automático y «Acerca de». */
 public final class AjustesController {
 
     private final ContenedorUi uiMija;
@@ -26,7 +30,9 @@ public final class AjustesController {
     @FXML
     private CheckBox recientesMija;
     @FXML
-    private CheckBox autobloqueoMija;
+    private Spinner<Integer> autobloqueoMinutosMija;
+    @FXML
+    private CheckBox bloquearMinimizarMija;
     @FXML
     private Label mensajeMija;
 
@@ -59,7 +65,30 @@ public final class AjustesController {
         recientesMija.setSelected(vmMija.recientesActivosProperty().get());
         recientesMija.selectedProperty().addListener((_, _, activoMija) -> guardar(
                 () -> vmMija.activarRecientes(activoMija)));
-        autobloqueoMija.setSelected(false);
+
+        // Auto-bloqueo por inactividad (0 = desactivado) y al minimizar (Fase 8).
+        SpinnerValueFactory.IntegerSpinnerValueFactory fabricaMija = new SpinnerValueFactory.IntegerSpinnerValueFactory(
+                0, AjustesViewModel.MAXIMO_MINUTOS_MIJA, vmMija.autoBloqueoMinutosProperty().get());
+        autobloqueoMinutosMija.setValueFactory(fabricaMija);
+        autobloqueoMinutosMija.focusedProperty().addListener((_, _, enfocadoMija) -> {
+            if (!enfocadoMija) {
+                autobloqueoMinutosMija.increment(0); // confirma lo escrito a mano en el editor
+            }
+        });
+        fabricaMija.valueProperty().addListener((_, _, minutosMija) -> guardar(
+                () -> vmMija.guardarAutoBloqueoMinutos(minutosMija == null ? 0 : minutosMija)));
+        bloquearMinimizarMija.setSelected(vmMija.bloquearAlMinimizarProperty().get());
+        bloquearMinimizarMija.selectedProperty().addListener((_, _, activoMija) -> guardar(
+                () -> vmMija.guardarBloquearAlMinimizar(activoMija)));
+    }
+
+    @FXML
+    private void acercaDe() {
+        Alert dialogoMija = new Alert(Alert.AlertType.INFORMATION, t("acercaDe.texto"), ButtonType.OK);
+        dialogoMija.setTitle(t("acercaDe.titulo"));
+        dialogoMija.setHeaderText(t("acercaDe.encabezado"));
+        dialogoMija.initOwner(uiMija.ventana());
+        dialogoMija.show();
     }
 
     private static <T> ListCell<T> celda(Function<T, String> textoMija) {

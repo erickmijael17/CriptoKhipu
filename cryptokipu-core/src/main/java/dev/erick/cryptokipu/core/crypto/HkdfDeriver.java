@@ -45,12 +45,19 @@ public final class HkdfDeriver {
         Objects.requireNonNull(materialMija, "materialMija");
         Objects.requireNonNull(infoMija, "infoMija");
         try {
-            HKDFParameterSpec.Builder extraccionMija = HKDFParameterSpec.ofExtract().addIKM(materialMija.bytes());
-            if (salMija != null && salMija.length > 0) {
-                extraccionMija.addSalt(salMija);
-            }
             KDF hkdfMija = KDF.getInstance(ALGORITMO_MIJA);
-            return SecureBytes.envolver(hkdfMija.deriveData(extraccionMija.thenExpand(infoMija, longitudMija)));
+            // La copia del material en el heap vive solo durante la derivación y se borra al terminar.
+            return SecureBytes.envolver(materialMija.conBytes(ikmMija -> {
+                HKDFParameterSpec.Builder extraccionMija = HKDFParameterSpec.ofExtract().addIKM(ikmMija);
+                if (salMija != null && salMija.length > 0) {
+                    extraccionMija.addSalt(salMija);
+                }
+                try {
+                    return hkdfMija.deriveData(extraccionMija.thenExpand(infoMija, longitudMija));
+                } catch (GeneralSecurityException errorMija) {
+                    throw new IllegalStateException("HKDF-SHA256 no disponible", errorMija);
+                }
+            }));
         } catch (GeneralSecurityException errorMija) {
             throw new IllegalStateException("HKDF-SHA256 no disponible", errorMija);
         }

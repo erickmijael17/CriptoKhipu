@@ -19,6 +19,7 @@
         <Button fx:id="guardarMija" text="%tokens.guardar" onAction="#guardar" mnemonicParsing="true"/>
         <Button fx:id="copiarMija" text="%tokens.copiar" onAction="#copiar" mnemonicParsing="true"/>
     </HBox>
+    <Label text="%tokens.avisoPortapapeles" wrapText="true" styleClass="text-muted"/>
     <Label fx:id="mensajeMija" wrapText="true" styleClass="aviso"/>
     <CheckBox fx:id="confirmadoMija" text="%tokens.confirmar" wrapText="true"/>
     <HBox>

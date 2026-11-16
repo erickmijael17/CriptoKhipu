@@ -102,7 +102,7 @@ public final class HeaderCodec {
     public static byte[] calcularMac(Header headerMija, SecureBytes claveHeaderMija) {
         try {
             Mac hmacMija = Mac.getInstance("HmacSHA256");
-            hmacMija.init(new SecretKeySpec(claveHeaderMija.bytes(), "HmacSHA256"));
+            hmacMija.init(claveHeaderMija.conBytes(bytesMija -> new SecretKeySpec(bytesMija, "HmacSHA256")));
             return hmacMija.doFinal(bytesAutenticados(headerMija));
         } catch (GeneralSecurityException errorMija) {
             throw new IllegalStateException("HmacSHA256 no disponible", errorMija);

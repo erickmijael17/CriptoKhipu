@@ -14,13 +14,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
 import javafx.stage.FileChooser;
 
 /**
  * Tokens de recuperación: se muestran una sola vez. Guardar TXT (nunca sobrescribe), copiar, y "Continuar" solo con
- * la casilla marcada. Al continuar se borran de memoria, de la lista y del portapapeles (si siguen ahí).
+ * la casilla marcada. Al continuar se borran de memoria, de la lista y del portapapeles (si siguen ahí); si se copian,
+ * el portapapeles se limpia solo a los 30 s ({@code GuardiaPortapapeles}).
  */
 public final class TokensController {
 
@@ -28,7 +27,6 @@ public final class TokensController {
     private final TokensViewModel vmMija = new TokensViewModel();
     private String nombreBovedaMija = "";
     private Runnable despuesMija = () -> { };
-    private boolean copiadoMija;
 
     @FXML
     private ListView<String> tokensMija;
@@ -56,6 +54,7 @@ public final class TokensController {
         tokensNuevosMija.forEach(TokenRecuperacion::close);
         controladorMija.nombreBovedaMija = nombreMija;
         controladorMija.despuesMija = despuesMija;
+        uiMija.tokensPendientes(true); // mientras no se guarden, el auto-bloqueo espera
         uiMija.navegador().abrirModal(cargadoMija.raizMija(), true);
     }
 
@@ -89,23 +88,19 @@ public final class TokensController {
 
     @FXML
     private void copiar() {
-        ClipboardContent contenidoMija = new ClipboardContent();
-        contenidoMija.putString(vmMija.textoParaCopiar());
-        Clipboard.getSystemClipboard().setContent(contenidoMija);
-        copiadoMija = true;
+        String textoMija = vmMija.textoParaCopiar();
+        uiMija.portapapeles().copiarSinHistorial(textoMija);
+        uiMija.guardiaPortapapeles().copiado(textoMija); // se limpia a los 30 s si sigue ahí
         mostrarMensaje(t("tokens.copiados"));
     }
 
     @FXML
     private void continuar() {
-        String copiadosMija = copiadoMija ? vmMija.textoParaCopiar() : null;
         if (!vmMija.continuar()) {
             return;
         }
-        Clipboard portapapelesMija = Clipboard.getSystemClipboard();
-        if (copiadosMija != null && copiadosMija.equals(portapapelesMija.getString())) {
-            portapapelesMija.clear();
-        }
+        uiMija.guardiaPortapapeles().alBloquearOSalir(); // borra de memoria y, si sigue igual, del portapapeles
+        uiMija.tokensPendientes(false);
         uiMija.navegador().cerrarModal();
         despuesMija.run();
     }

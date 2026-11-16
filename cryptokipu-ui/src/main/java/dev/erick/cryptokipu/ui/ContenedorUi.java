@@ -6,11 +6,14 @@ import dev.erick.cryptokipu.infra.configuracion.PreferenciasStore;
 import dev.erick.cryptokipu.infra.storage.PoliticaDestino;
 import dev.erick.cryptokipu.ui.comun.EjecutorTareas;
 import dev.erick.cryptokipu.ui.comun.Navegador;
+import dev.erick.cryptokipu.ui.comun.PortapapelesFx;
 import dev.erick.cryptokipu.ui.viewmodel.AjustesViewModel;
 import dev.erick.cryptokipu.ui.viewmodel.AsistenteCreacionViewModel;
+import dev.erick.cryptokipu.ui.viewmodel.AutoBloqueo;
 import dev.erick.cryptokipu.ui.viewmodel.DesbloqueoViewModel;
 import dev.erick.cryptokipu.ui.viewmodel.EstadoApp;
 import dev.erick.cryptokipu.ui.viewmodel.ExploradorViewModel;
+import dev.erick.cryptokipu.ui.viewmodel.GuardiaPortapapeles;
 import dev.erick.cryptokipu.ui.viewmodel.SeguridadViewModel;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -42,6 +45,11 @@ public final class ContenedorUi {
     private final AsistenteCreacionViewModel asistenteMija;
     private final ExploradorViewModel exploradorMija;
     private final SeguridadViewModel seguridadMija;
+    private final PortapapelesFx portapapelesMija = new PortapapelesFx();
+    private final GuardiaPortapapeles guardiaMija = new GuardiaPortapapeles(portapapelesMija, portapapelesMija);
+    private final AutoBloqueo autoBloqueoMija;
+    /** Pantallas de tokens abiertas: mientras haya una, no se bloquea (los tokens aún no se guardaron). */
+    private int tokensPendientesMija;
     private EjecutorTareas ejecutorMija;
     private Navegador navegadorMija;
     private Window ventanaMija;
@@ -59,6 +67,16 @@ public final class ContenedorUi {
         this.exploradorMija = new ExploradorViewModel(appMija,
                 ServiceLoader.load(VisorDocumentos.class).stream().map(ServiceLoader.Provider::get).toList());
         this.seguridadMija = new SeguridadViewModel(appMija);
+        estadoMija.alCerrar(guardiaMija::alBloquearOSalir);
+        this.autoBloqueoMija = new AutoBloqueo(estadoMija,
+                () -> (ejecutorMija != null && ejecutorMija.enCurso()) || tokensPendientesMija > 0,
+                () -> System.nanoTime() / 1_000_000L);
+        autoBloqueoMija.usarMinutos(ajustesMija.autoBloqueoMinutosProperty().get());
+        autoBloqueoMija.bloquearAlMinimizar(ajustesMija.bloquearAlMinimizarProperty().get());
+        ajustesMija.autoBloqueoMinutosProperty().addListener((_, _, minutosMija) ->
+                autoBloqueoMija.usarMinutos(minutosMija.intValue()));
+        ajustesMija.bloquearAlMinimizarProperty().addListener((_, _, activoMija) ->
+                autoBloqueoMija.bloquearAlMinimizar(activoMija));
     }
 
     /** {@code controllerFactory}: los controladores reciben este contenedor por constructor. */
@@ -118,6 +136,23 @@ public final class ContenedorUi {
 
     public SeguridadViewModel seguridad() {
         return seguridadMija;
+    }
+
+    public AutoBloqueo autoBloqueo() {
+        return autoBloqueoMija;
+    }
+
+    public GuardiaPortapapeles guardiaPortapapeles() {
+        return guardiaMija;
+    }
+
+    public PortapapelesFx portapapeles() {
+        return portapapelesMija;
+    }
+
+    /** Una pantalla de tokens se abrió ({@code true}) o se cerró ({@code false}): el auto-bloqueo espera. */
+    public void tokensPendientes(boolean abiertaMija) {
+        tokensPendientesMija = Math.max(0, tokensPendientesMija + (abiertaMija ? 1 : -1));
     }
 
     public EjecutorTareas ejecutor() {

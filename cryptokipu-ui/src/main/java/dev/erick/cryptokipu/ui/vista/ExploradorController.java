@@ -136,6 +136,12 @@ public final class ExploradorController implements Refrescable {
 
     @FXML
     private void initialize() {
+        // Al cerrar o bloquear la bóveda: reproductor detenido, visores cerrados y sin nombres de archivos en pantalla.
+        uiMija.estado().alCerrar(() -> {
+            limpiarPrevia();
+            tablaMija.setRoot(null);
+            resumenMija.setText("");
+        });
         columna(columnaNombreMija, Nodo::nombreMija);
         columna(columnaTamanoMija, nodoMija -> nodoMija.esCarpeta() ? "" : tamano(nodoMija.tamanoMija()));
         columna(columnaFechaMija, nodoMija -> nodoMija.esCarpeta() || nodoMija.modificadoMija() <= 0 ? ""

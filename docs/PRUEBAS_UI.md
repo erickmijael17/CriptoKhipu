@@ -1,4 +1,4 @@
-# Pruebas de la interfaz (Fase 6)
+# Pruebas de la interfaz de CriptoKhipu (Fase 6)
 
 JavaFX 25 no tiene modo *headless* (ver [ADR-013](adr/ADR-013-interfaz-javafx-25.md)). La interfaz se prueba en tres niveles.
 
@@ -99,9 +99,37 @@ Cada mutación se aplicó a mano, se comprobó que falla al menos una prueba y s
 - [ ] Al guardar se muestran 6 tokens nuevos; luego el explorador muestra los archivos.
 - [ ] El token usado ya no sirve.
 
+### Endurecimiento (Fase 8)
+- [ ] Ajustes → «Bloqueo automático»: poner 1 minuto, abrir una bóveda y no tocar nada: a los 60 s vuelve a la pantalla de
+      desbloqueo con la misma ruta, aparece «Bóveda bloqueada» y el reproductor (si había un video) se detiene.
+- [ ] Con 0 minutos el bloqueo queda desactivado. Mover el ratón o escribir reinicia la cuenta.
+- [ ] «Bloquear al minimizar»: minimizar la ventana con la casilla marcada bloquea; sin ella, no.
+- [ ] Con un «Agregar» o «Compactar» largo en curso, el bloqueo espera a que termine y entonces bloquea.
+- [ ] Abrir un archivo con aplicación externa, dejarlo abierto en Word/Visor y dejar que bloquee: aparece el aviso
+      «Una aplicación todavía usa archivos de la bóveda».
+- [ ] Desbloqueo: dos intentos fallidos seguidos no esperan; el tercero deshabilita «Abrir» con «Espera 2 s…» y la cuenta
+      baja cada segundo (luego 4, 8, 16 y 30 s). El mensaje nunca dice qué factor falló.
+- [ ] Tokens: «Copiar» y esperar 30 s: el portapapeles queda vacío. Copiar otra cosa antes de los 30 s: NO se borra.
+- [ ] Windows: Win+V tras «Copiar» no muestra los tokens en el historial (la prueba automática solo verifica que los
+      formatos de exclusión estén en el portapapeles; el panel Win+V hay que mirarlo a mano). La pantalla de tokens
+      recomienda «Guardar TXT».
+- [ ] Seguridad → autodestrucción: poner N > 0 y «Aplicar…» muestra un aviso (también destruye la bóveda para ti) y pide
+      escribir «DESTRUIR»; cancelar en cualquiera de los dos pasos no cambia nada. Poner 0 no pide confirmación.
+- [ ] Ajustes → «Acerca de CriptoKhipu» muestra el nombre, la versión y la licencia.
+
 ### Cierre
 - [ ] Cerrar la ventana durante "Cifrando archivos…": pide confirmación, cancela, espera y sale.
 - [ ] Navegación solo con teclado: Tab recorre los controles; Alt+letra activa los botones con mnemónico (Alt+C crear, Alt+A abrir).
+
+## 4. Automáticas de la Fase 8
+
+| Qué | Prueba |
+|---|---|
+| Auto-bloqueo cierra la sesión, espera operaciones, al minimizar | `AutoBloqueoTest` |
+| Portapapeles: 30 s, al bloquear y salir, solo si sigue igual | `GuardiaPortapapelesTest` |
+| Formatos de exclusión del historial de Windows | `ToolkitFxTest.windowsRecibeLosFormatosQueExcluyenElContenidoDelHistorial` |
+| Retardo entre intentos (UI) y doble confirmación de la autodestrucción | `RetardoDesbloqueoTest` |
+| Nombre visible «CriptoKhipu» (sin el nombre provisional anterior en recursos ni guías) | `NombreVisibleTest` (módulo `cryptokipu-arquitectura`) |
 
 ## Capturas
 

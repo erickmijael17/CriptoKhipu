@@ -158,6 +158,7 @@ public final class ContenedorKipu implements ContenedorAbierto {
     /** Abre y bloquea la bóveda. Lee ambos headers y localiza el último footer válido; no necesita claves. */
     public static ContenedorKipu abrir(Path rutaMija, Opciones opcionesMija) throws IOException {
         ContenedorKipu contenedorMija = new ContenedorKipu(rutaMija, opcionesMija);
+        exigirSinCompactacionEnCurso(contenedorMija.rutaMija);
         try {
             contenedorMija.canalMija = FileChannel.open(contenedorMija.rutaMija, StandardOpenOption.READ,
                     StandardOpenOption.WRITE);
@@ -178,7 +179,7 @@ public final class ContenedorKipu implements ContenedorAbierto {
 
     /** Desbloqueo con una clave maestra ya conocida (pruebas y migraciones). */
     public void desbloquear(SecureBytes claveMaestraEntradaMija) throws IOException {
-        desbloquear(_ -> Optional.of(SecureBytes.copiaDe(claveMaestraEntradaMija.bytes())));
+        desbloquear(_ -> Optional.of(copiaSegura(claveMaestraEntradaMija)));
     }
 
     /**
@@ -402,6 +403,14 @@ public final class ContenedorKipu implements ContenedorAbierto {
         exigirEscribible();
         cerrarLectores();
         verificarDestino(0, canalMija.size());
+        // Fase 8: <ruta>.lock se mantiene durante TODO el proceso, también en el reemplazo atómico, cuando el
+        // archivo principal no está bloqueado por nadie. Se borra al terminar (BloqueoAuxiliar.close).
+        try (BloqueoAuxiliar _ = BloqueoAuxiliar.adquirir(rutaBloqueo(rutaMija))) {
+            compactarConBloqueo();
+        }
+    }
+
+    private void compactarConBloqueo() throws IOException {
         Path temporalMija = rutaMija.resolveSibling(rutaMija.getFileName() + ".tmp");
         Files.deleteIfExists(temporalMija);
         Manifest nuevoMija;
@@ -432,6 +441,7 @@ public final class ContenedorKipu implements ContenedorAbierto {
         liberarCanal();
         Files.move(temporalMija, rutaMija, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         sincronizarDirectorio(directorio(rutaMija));
+        opcionesMija.interruptorMija().en(Interruptor.Paso.ARCHIVO_REEMPLAZADO);
         canalMija = FileChannel.open(rutaMija, StandardOpenOption.READ, StandardOpenOption.WRITE);
         bloquear(false);
         manifestMija = nuevoMija;
@@ -525,6 +535,72 @@ public final class ContenedorKipu implements ContenedorAbierto {
         }
     }
 
+    // ------------------------------------------------------------------ bloqueo auxiliar de la compactación
+
+    /** {@code <ruta>.lock}: lo mantiene la instancia que compacta mientras reemplaza el archivo (Fase 8). */
+    static Path rutaBloqueo(Path rutaMija) {
+        return rutaMija.resolveSibling(rutaMija.getFileName() + ".lock");
+    }
+
+    /**
+     * Si hay un {@code .lock}: con una instancia viva compactando es {@code BovedaEnUso}; si nadie lo bloquea quedó
+     * huérfano (la instancia murió a medias) y se borra. Sin {@code .lock}, o sin permiso para mirarlo (medio de
+     * solo lectura), no hace nada.
+     */
+    private static void exigirSinCompactacionEnCurso(Path rutaMija) {
+        Path bloqueoMija = rutaBloqueo(rutaMija);
+        if (!Files.exists(bloqueoMija)) {
+            return;
+        }
+        try (BloqueoAuxiliar _ = BloqueoAuxiliar.adquirir(bloqueoMija)) {
+            REGISTRO_MIJA.log(System.Logger.Level.INFO, "Se limpió un archivo de bloqueo de compactación huérfano");
+        } catch (IOException _) {
+            // Medio de solo lectura o sin permiso: no hay compactación posible desde aquí.
+        }
+    }
+
+    /** Archivo de bloqueo exclusivo con su propio ciclo de vida: se crea al adquirirlo y se borra al cerrarlo. */
+    private static final class BloqueoAuxiliar implements AutoCloseable {
+        private final Path archivoMija;
+        private final FileChannel canalMija;
+        private final FileLock bloqueoMija;
+
+        private BloqueoAuxiliar(Path archivoMija, FileChannel canalMija, FileLock bloqueoMija) {
+            this.archivoMija = archivoMija;
+            this.canalMija = canalMija;
+            this.bloqueoMija = bloqueoMija;
+        }
+
+        static BloqueoAuxiliar adquirir(Path archivoMija) throws IOException {
+            FileChannel canalMija = FileChannel.open(archivoMija, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+            FileLock bloqueoMija = null;
+            try {
+                bloqueoMija = canalMija.tryLock();
+            } catch (OverlappingFileLockException _) {
+                // Otra instancia de este mismo proceso lo tiene.
+            } catch (IOException _) {
+                // En Windows, un bloqueo de otro proceso hace fallar el intento: también es "en uso".
+            }
+            if (bloqueoMija == null) {
+                canalMija.close();
+                throw new ExcepcionBoveda(new ErrorBoveda.BovedaEnUso());
+            }
+            return new BloqueoAuxiliar(archivoMija, canalMija, bloqueoMija);
+        }
+
+        @Override
+        public void close() {
+            try {
+                bloqueoMija.release();
+                canalMija.close();
+                Files.deleteIfExists(archivoMija);
+            } catch (IOException _) {
+                REGISTRO_MIJA.log(System.Logger.Level.WARNING,
+                        "No se pudo borrar el archivo de bloqueo de compactación; se limpiará al abrir la bóveda");
+            }
+        }
+    }
+
     // ------------------------------------------------------------------ internos
 
     private void bloquear(boolean compartidoMija) throws IOException {
@@ -603,7 +679,9 @@ public final class ContenedorKipu implements ContenedorAbierto {
     }
 
     private Optional<Footer> footerEn(long posicionMija) throws IOException {
-        if (posicionMija < OFFSET_DATOS_MIJA || posicionMija + Footer.TAMANO_MIJA > canalMija.size()) {
+        // Sin sumar a la posición: la pista de la Zona C no está autenticada y puede valer Long.MAX_VALUE (la suma
+        // desbordaría a un negativo y la lectura fallaría con IOException en lugar de rechazarse). Hallazgo de Jazzer.
+        if (posicionMija < OFFSET_DATOS_MIJA || posicionMija > canalMija.size() - Footer.TAMANO_MIJA) {
             return Optional.empty();
         }
         return Footer.leer(Canales.leer(canalMija, posicionMija, Footer.TAMANO_MIJA, Zona.FOOTER), posicionMija);
@@ -715,9 +793,14 @@ public final class ContenedorKipu implements ContenedorAbierto {
 
     private void prepararClaves(SecureBytes claveMaestraEntradaMija) {
         cerrarClaves();
-        claveMaestraMija = SecureBytes.copiaDe(claveMaestraEntradaMija.bytes());
+        claveMaestraMija = copiaSegura(claveMaestraEntradaMija);
         claveHeaderMija = HkdfDeriver.claveHeaderMac(claveMaestraMija);
         claveManifestMija = HkdfDeriver.claveManifest(claveMaestraMija);
+    }
+
+    /** Duplica una clave fuera del heap; la copia temporal en el heap se borra dentro de {@code envolver}. */
+    private static SecureBytes copiaSegura(SecureBytes origenMija) {
+        return SecureBytes.envolver(origenMija.bytes());
     }
 
     private void cerrarClaves() {

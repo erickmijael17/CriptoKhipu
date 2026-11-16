@@ -2,18 +2,23 @@ package dev.erick.cryptokipu.cli.comandos;
 
 import dev.erick.cryptokipu.app.casos.DesbloquearBoveda;
 import dev.erick.cryptokipu.app.casos.InspeccionarBoveda;
+import dev.erick.cryptokipu.app.casos.RetardoIntentos;
 import dev.erick.cryptokipu.app.casos.SesionBoveda;
+import dev.erick.cryptokipu.app.mensajes.CatalogoMensajes;
 import dev.erick.cryptokipu.cli.Entorno;
 import dev.erick.cryptokipu.cli.ErrorUso;
 import dev.erick.cryptokipu.cli.LectorFlujo;
 import dev.erick.cryptokipu.cli.LectorSecretos;
 import dev.erick.cryptokipu.core.auth.Credenciales;
 import dev.erick.cryptokipu.core.auth.TokenRecuperacion;
+import dev.erick.cryptokipu.core.error.ErrorBoveda;
+import dev.erick.cryptokipu.core.error.ExcepcionBoveda;
 import dev.erick.cryptokipu.infra.autenticacion.ExportadorTokensTxt;
 import dev.erick.cryptokipu.infra.autenticacion.LlaveSeguridad;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -102,15 +107,43 @@ abstract class ComandoBase implements Callable<Integer> {
         if (infoMija.requiereLlaveMija() && llaveMija == null) {
             throw new ErrorUso("Esta bóveda requiere la llave de seguridad: indica --keyfile <ruta>.");
         }
-        try (Credenciales credencialesMija = credencialesVigentes(llaveMija)) {
-            SesionBoveda sesionMija = entornoMija.appMija().desbloquearBoveda()
-                    .ejecutar(new DesbloquearBoveda.Comando(bovedaMija, credencialesMija));
-            if (conservarMija) {
-                vigentesGuardadasMija = new Credenciales(credencialesMija.pinMija().clone(),
-                        credencialesMija.contrasenaMija().clone(), credencialesMija.fraseMija().clone(),
-                        credencialesMija.tieneLlave() ? credencialesMija.huellaLlaveMija().clone() : null);
+        RetardoIntentos retardoMija = new RetardoIntentos();
+        while (true) {
+            try (Credenciales credencialesMija = credencialesVigentes(llaveMija)) {
+                SesionBoveda sesionMija = entornoMija.appMija().desbloquearBoveda()
+                        .ejecutar(new DesbloquearBoveda.Comando(bovedaMija, credencialesMija));
+                if (conservarMija) {
+                    vigentesGuardadasMija = new Credenciales(credencialesMija.pinMija().clone(),
+                            credencialesMija.contrasenaMija().clone(), credencialesMija.fraseMija().clone(),
+                            credencialesMija.tieneLlave() ? credencialesMija.huellaLlaveMija().clone() : null);
+                }
+                return sesionMija;
+            } catch (ExcepcionBoveda errorMija) {
+                // Retardo creciente (Fase 8): solo con consola interactiva, donde la persona puede volver a escribir.
+                // Con --secretos-stdin cada proceso es un intento y el error sale tal cual (código 3).
+                if (comunesMija.secretosStdinMija
+                        || !(errorMija.error() instanceof ErrorBoveda.CredencialesIncorrectas)) {
+                    throw errorMija;
+                }
+                entornoMija.erroresMija().println(CatalogoMensajes.mensaje(errorMija.error()));
+                retardoMija.registrarFallo();
+                esperar(retardoMija);
             }
-            return sesionMija;
+        }
+    }
+
+    /** Cuenta regresiva visible en stderr hasta que el retardo termine. No dice qué factor falló. */
+    private void esperar(RetardoIntentos retardoMija) {
+        try {
+            long segundosMija = retardoMija.segundosRestantes();
+            while (segundosMija > 0) {
+                entornoMija.erroresMija().println("Espera " + segundosMija + " s antes de volver a intentarlo…");
+                entornoMija.pausaMija().dormir(Duration.ofSeconds(1));
+                segundosMija--;
+            }
+        } catch (InterruptedException _) {
+            Thread.currentThread().interrupt();
+            throw new ErrorUso("Cancelado por el usuario.");
         }
     }
 

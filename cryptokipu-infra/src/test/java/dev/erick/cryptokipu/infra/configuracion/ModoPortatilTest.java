@@ -20,7 +20,7 @@ class ModoPortatilTest {
     Path usbMija;
 
     private Path imagenMija() throws IOException {
-        Path raizMija = Files.createDirectories(usbMija.resolve("CryptoKipu-win"));
+        Path raizMija = Files.createDirectories(usbMija.resolve("CriptoKhipu-win"));
         Files.createDirectories(raizMija.resolve("app"));
         return raizMija;
     }

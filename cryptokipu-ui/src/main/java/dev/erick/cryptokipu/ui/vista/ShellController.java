@@ -9,14 +9,21 @@ import dev.erick.cryptokipu.ui.comun.Navegador;
 import dev.erick.cryptokipu.ui.comun.Refrescable;
 import java.util.EnumMap;
 import java.util.Map;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.input.InputEvent;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
@@ -30,6 +37,7 @@ public final class ShellController implements Navegador, EjecutorTareas.VistaPro
     private final Map<Vista, ContenedorUi.Cargado<?>> vistasMija = new EnumMap<>(Vista.class);
     private final ModalPane modalMija = new ModalPane();
     private final PauseTransition ocultarNotificacionMija = new PauseTransition(Duration.seconds(5));
+    private final Timeline revisionAutoBloqueoMija;
     private Runnable alCancelarMija = () -> { };
 
     @FXML
@@ -61,6 +69,8 @@ public final class ShellController implements Navegador, EjecutorTareas.VistaPro
 
     public ShellController(ContenedorUi uiMija) {
         this.uiMija = uiMija;
+        this.revisionAutoBloqueoMija = new Timeline(new KeyFrame(Duration.seconds(1),
+                _ -> uiMija.autoBloqueo().revisar()));
     }
 
     @FXML
@@ -96,6 +106,45 @@ public final class ShellController implements Navegador, EjecutorTareas.VistaPro
         ocultarNotificacionMija.setOnFinished(_ -> notificacionMija.setVisible(false));
         notificacionMija.managedProperty().bind(notificacionMija.visibleProperty());
         mostrar(Vista.INICIO);
+        iniciarAutoBloqueo();
+    }
+
+    // ------------------------------------------------------------------ auto-bloqueo (Fase 8)
+
+    /** Actividad = teclado y ratón (filtro de eventos en la escena); una revisión por segundo. */
+    private void iniciarAutoBloqueo() {
+        var autoBloqueoMija = uiMija.autoBloqueo();
+        autoBloqueoMija.alBloquear(this::alBloquear);
+        if (raizMija.getScene() != null) {
+            vigilarActividad(raizMija.getScene());
+        }
+        raizMija.sceneProperty().addListener((_, _, escenaMija) -> {
+            if (escenaMija != null) {
+                vigilarActividad(escenaMija);
+            }
+        });
+        revisionAutoBloqueoMija.setCycleCount(Animation.INDEFINITE);
+        revisionAutoBloqueoMija.play();
+    }
+
+    private void vigilarActividad(Scene escenaMija) {
+        escenaMija.addEventFilter(InputEvent.ANY, _ -> uiMija.autoBloqueo().actividad());
+    }
+
+    /** Después de bloquear: vuelve al desbloqueo con la misma ruta y avisa si una app externa retiene archivos. */
+    private void alBloquear(boolean temporalesLimpiosMija) {
+        cerrarModal();
+        uiMija.desbloqueo().rutaProperty().set(uiMija.estado().ultimaRuta());
+        mostrar(Vista.DESBLOQUEO);
+        notificar(t("bloqueo.notificacion"));
+        if (!temporalesLimpiosMija) {
+            Alert avisoMija = new Alert(Alert.AlertType.WARNING, t("bloqueo.externoAbierto"), ButtonType.OK);
+            avisoMija.setHeaderText(t("bloqueo.externoTitulo"));
+            if (uiMija.ventana() != null) {
+                avisoMija.initOwner(uiMija.ventana());
+            }
+            avisoMija.show(); // show, no showAndWait: esto corre dentro de un pulso del temporizador
+        }
     }
 
     // ------------------------------------------------------------------ Navegador

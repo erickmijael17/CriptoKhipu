@@ -189,7 +189,7 @@ F0 Fundaciones ─► F1 Núcleo cripto ─► F2 Formato .kipu ─► F3 Autent
 | `ChunkCipher` | Cifrado por bloques de 1 MiB, `nonce = 0⁴ ‖ índice(8B)`, `AAD = fileId ‖ índice ‖ esÚltimo` | `AesGcmAead` |
 | `KeyWrap` | Envolver/desenvolver la MK en un slot con **nonce aleatorio de 12 B** en cada envoltura | `AesGcmAead` |
 | `ProveedorNonce` | Única fuente de nonces: aleatorio de 12 B (slots, manifest) o `0⁴ ‖ índice` (bloques) | `SecureRandom` |
-| `SecureBytes` | Bytes sensibles con `close()` que los borra (`Arrays.fill`); `toString()` = `"***"` | — (en Fase 8 pasa a FFM) |
+| `SecureBytes` | Bytes sensibles con `close()` que los borra; `toString()` = `"***"` | Desde la Fase 8 vive fuera del heap (FFM) |
 | `FuenteAleatoria` (puerto) | Abstracción de `SecureRandom` para poder probar | — |
 
 Pruebas:
@@ -513,7 +513,7 @@ Detalles:
 
 ### Fase 8 — Endurecimiento
 
-1. MK y subclaves en `MemorySegment` fuera del heap (FFM, `Arena.ofConfined()`), borradas al bloquear.
+1. MK y subclaves en `MemorySegment` fuera del heap (FFM, `Arena.ofShared()`: la sesión se usa desde varios hilos virtuales), puestas en cero y liberadas al bloquear; best-effort: páginas bloqueadas en RAM (`VirtualLock`/`mlock`). **Hecho** (ver `docs/THREAT_MODEL.md` §5).
 2. **Auto-bloqueo** por inactividad (5 min por defecto) y opcional al minimizar.
 3. **Portapapeles**: si se copia un token, se limpia a los 30 s.
 4. Retardo creciente entre intentos fallidos en la UI.

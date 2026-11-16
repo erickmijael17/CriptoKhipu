@@ -1,15 +1,15 @@
 # Cómo llevar tu bóveda en un USB
 
-CryptoKipu puede viajar en un USB y abrirse en otro equipo **sin instalar nada y sin dejar archivos en él**: los
+CriptoKhipu puede viajar en un USB y abrirse en otro equipo **sin instalar nada y sin dejar archivos en él**: los
 archivos descifrados solo existen en la memoria (RAM) mientras la bóveda está abierta.
 
 ## 1. Qué va en el USB
 
 ```
 USB/
-├── CryptoKipu-win/            ← la app portátil (una carpeta por sistema operativo)
+├── CriptoKhipu-win/            ← la app portátil (una carpeta por sistema operativo)
 │   ├── portable.properties    ← activa el modo portátil (puede estar vacío)
-│   ├── CryptoKipu.exe
+│   ├── CriptoKhipu.exe
 │   ├── app/ runtime/          ← la aplicación y su Java incluido
 │   ├── datos/                 ← preferencias (solo si no pones guardarPreferencias=false)
 │   ├── tmp/                   ← temporales de la JVM; se vacía al cerrar
@@ -18,22 +18,22 @@ USB/
 └── (la llave de seguridad y la hoja de tokens van en OTRO medio)
 ```
 
-- **Una carpeta de la app por sistema operativo:** `CryptoKipu-win` no funciona en Linux ni en macOS.
+- **Una carpeta de la app por sistema operativo:** `CriptoKhipu-win` no funciona en Linux ni en macOS.
 - **Nunca guardes en el mismo USB** la llave de seguridad (`.kipukey`) ni la hoja de tokens: quien encuentre el USB
   tendría todo lo necesario salvo tus contraseñas.
 - Formatea el USB en **exFAT** si vas a guardar archivos de más de 4 GiB (FAT32 limita la bóveda a 4 GiB − 1 B;
-  CryptoKipu te avisa al crearla).
+  CriptoKhipu te avisa al crearla).
 
 ## 2. El archivo `portable.properties`
 
-Es el marcador del modo portátil. CryptoKipu lo busca junto a la aplicación y en la carpeta superior.
+Es el marcador del modo portátil. CriptoKhipu lo busca junto a la aplicación y en la carpeta superior.
 
 ```properties
 # Opcional. Con false no se guarda NADA (ni preferencias ni bóvedas recientes) en el USB.
 guardarPreferencias=true
 ```
 
-En modo portátil CryptoKipu no usa el registro de Windows ni `~/.java`, y la JVM arranca con estas opciones
+En modo portátil CriptoKhipu no usa el registro de Windows ni `~/.java`, y la JVM arranca con estas opciones
 (`./gradlew :cryptokipu-ui:opcionesJpackage` las imprime tal como se pasan a `jpackage --java-options`):
 
 | Opción | Para qué |
@@ -45,10 +45,11 @@ En modo portátil CryptoKipu no usa el registro de Windows ni `~/.java`, y la JV
 | `-XX:MaxRAMPercentage=70` | Deja espacio para Argon2id (hasta 1 GiB) |
 | `-Djava.io.tmpdir=$APPDIR/tmp` | Cualquier temporal queda en el USB y se vacía al cerrar |
 | `-Djava.awt.headless=true` | Las diapositivas y las páginas PDF se dibujan sin pantalla propia |
+| `--enable-native-access=dev.erick.cryptokipu.core` | Permite bloquear en RAM las páginas con las claves (`VirtualLock`/`mlock`) para que no vayan al archivo de paginación |
 
 ## 3. Abrir tu bóveda en otro equipo
 
-1. Conecta el USB y ejecuta `CryptoKipu.exe` desde la carpeta de la app (no la copies al equipo).
+1. Conecta el USB y ejecuta `CriptoKhipu.exe` desde la carpeta de la app (no la copies al equipo).
 2. **Abrir** → elige `mis-archivos.kipu` → escribe tus tres contraseñas (y conecta el medio con la llave, si la usas).
 3. Antes de derivar las claves, la app compara la memoria libre con la que pide el perfil de la bóveda y **te advierte**
    si el equipo no alcanza (un perfil «Máximo» pide 1 GiB; en un equipo con poca RAM libre puede fallar).

@@ -12,10 +12,13 @@ import java.nio.file.Path;
 import java.util.function.Consumer;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -78,6 +81,9 @@ public final class SeguridadController implements Refrescable {
     @FXML
     private void aplicarUmbral() {
         int nuevoMija = umbralMija.getValue();
+        if (SeguridadViewModel.exigeDobleConfirmacion(nuevoMija) && !confirmarAutodestruccion(nuevoMija)) {
+            return;
+        }
         pedirVigentes(t("seguridad.umbral.aplicar"), vigentesMija -> uiMija.ejecutor().ejecutar(progresoMija -> {
             try (Credenciales credencialesMija = vigentesMija.construir()) {
                 vmMija.cambiarUmbral(uiMija.estado().sesion(), credencialesMija, nuevoMija, progresoMija);
@@ -106,6 +112,26 @@ public final class SeguridadController implements Refrescable {
             vmMija.compactar(uiMija.estado().sesion(), progresoMija);
             return Boolean.TRUE;
         }, _ -> uiMija.navegador().notificar(t("notificacion.compactada")), this::fallo);
+    }
+
+    /**
+     * Doble confirmación de la autodestrucción: (1) aviso claro de que también destruye la bóveda para el dueño;
+     * (2) escribir la palabra de confirmación. Cancelar en cualquiera de las dos no cambia nada.
+     */
+    private boolean confirmarAutodestruccion(int umbralNuevoMija) {
+        Alert avisoMija = new Alert(Alert.AlertType.WARNING, t("seguridad.umbral.confirmar1", umbralNuevoMija),
+                ButtonType.YES, ButtonType.NO);
+        avisoMija.setTitle(t("seguridad.umbral.confirmar1.titulo"));
+        avisoMija.setHeaderText(t("seguridad.umbral.confirmar1.titulo"));
+        avisoMija.initOwner(uiMija.ventana());
+        if (avisoMija.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
+            return false;
+        }
+        TextInputDialog palabraMija = new TextInputDialog();
+        palabraMija.setTitle(t("seguridad.umbral.confirmar2.titulo"));
+        palabraMija.setHeaderText(t("seguridad.umbral.confirmar2", SeguridadViewModel.palabraConfirmacion()));
+        palabraMija.initOwner(uiMija.ventana());
+        return palabraMija.showAndWait().map(SeguridadViewModel::palabraCorrecta).orElse(false);
     }
 
     private void fallo(Throwable errorMija) {

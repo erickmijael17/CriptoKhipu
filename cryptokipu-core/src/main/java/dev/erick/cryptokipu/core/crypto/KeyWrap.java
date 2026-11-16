@@ -17,7 +17,8 @@ public final class KeyWrap {
 
     public MkEnvuelta envolver(SecureBytes kekMija, SecureBytes claveMaestraMija, byte[] datosAsociadosMija) {
         byte[] nonceNuevoMija = nonceMija.aleatorio();
-        byte[] cifradoMija = AesGcmAead.cifrar(kekMija, nonceNuevoMija, datosAsociadosMija, claveMaestraMija.bytes());
+        byte[] cifradoMija = claveMaestraMija.conBytes(
+                maestraMija -> AesGcmAead.cifrar(kekMija, nonceNuevoMija, datosAsociadosMija, maestraMija));
         return new MkEnvuelta(nonceNuevoMija, cifradoMija);
     }
 

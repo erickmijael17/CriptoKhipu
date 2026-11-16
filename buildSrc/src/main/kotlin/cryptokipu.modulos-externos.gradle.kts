@@ -10,6 +10,11 @@ extraJavaModuleInfo {
     // Los jars de los módulos del propio proyecto ya traen su module-info (y aún no existen al resolver).
     skipLocalJars = true
 
+    // Fuzzing (Fase 9): solo en tiempo de prueba y en el classpath; nunca entran a una imagen jlink.
+    automaticModule("com.code-intelligence:jazzer", "com.code_intelligence.jazzer")
+    automaticModule("com.code-intelligence:jazzer-api", "com.code_intelligence.jazzer.api")
+    automaticModule("com.code-intelligence:jazzer-junit", "com.code_intelligence.jazzer.junit")
+
     module("org.apache.pdfbox:pdfbox-io", "org.apache.pdfbox.io") {
         exportAllPackages()
         requires("org.apache.commons.logging")

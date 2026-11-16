@@ -92,12 +92,12 @@ public final class ConfiguracionSegura {
 
         @Override
         public File createTempFile(String prefijoMija, String sufijoMija) throws IOException {
-            throw new IOException("CryptoKipu no permite archivos temporales: la vista previa es solo en memoria");
+            throw new IOException("CriptoKhipu no permite archivos temporales: la vista previa es solo en memoria");
         }
 
         @Override
         public File createTempDirectory(String prefijoMija) throws IOException {
-            throw new IOException("CryptoKipu no permite carpetas temporales: la vista previa es solo en memoria");
+            throw new IOException("CriptoKhipu no permite carpetas temporales: la vista previa es solo en memoria");
         }
     }
 }

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,6 +29,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,6 +38,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.CRC32C;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -528,6 +532,108 @@ class ContenedorKipuTest {
             assertArrayEquals(Files.readAllBytes(unoMija),
                     extraer(contenedorMija, contenedorMija.manifest().entradasMija().getFirst()));
             contenedorMija.compactar();
+        }
+    }
+
+    /**
+     * Fase 8: entre cerrar el archivo viejo y reabrir el compactado nadie tiene bloqueada la bóveda. El archivo
+     * {@code .lock} cierra esa ventana: una segunda instancia que intente abrir en ese instante recibe BovedaEnUso.
+     */
+    @Test
+    void duranteElReemplazoDeLaCompactacionOtraInstanciaNoPuedeAbrir() throws IOException {
+        try (ContenedorKipu contenedorMija = crear()) {
+            EntradaManifest entradaMija = contenedorMija.agregar(List.of(new Origen(archivo("uno.bin", 5000), "uno.bin"),
+                    new Origen(archivo("dos.bin", 5000), "dos.bin"))).get(1);
+            contenedorMija.eliminar(entradaMija.fileIdMija());
+        }
+        Path bloqueoMija = carpetaMija.resolve("prueba.kipu.lock");
+        AtomicReference<ExcepcionBoveda> intentoMija = new AtomicReference<>();
+        AtomicReference<Boolean> habiaBloqueoMija = new AtomicReference<>();
+        Interruptor observadorMija = pasoMija -> {
+            if (pasoMija == Interruptor.Paso.ARCHIVO_REEMPLAZADO) {
+                habiaBloqueoMija.set(Files.exists(bloqueoMija));
+                try {
+                    ContenedorKipu.abrir(bovedaMija, opciones(Interruptor.NINGUNO_MIJA)).close();
+                    intentoMija.set(null); // si llegó aquí, la ventana está abierta
+                } catch (ExcepcionBoveda errorMija) {
+                    intentoMija.set(errorMija);
+                }
+            }
+        };
+        try (ContenedorKipu contenedorMija = ContenedorKipu.abrir(bovedaMija, opciones(observadorMija))) {
+            contenedorMija.desbloquear(maestraMija);
+            assertTrue(Files.notExists(bloqueoMija), "sin compactar no hay .lock");
+            contenedorMija.compactar();
+        }
+
+        assertEquals(Boolean.TRUE, habiaBloqueoMija.get(), "el .lock debe existir durante el reemplazo");
+        assertNotNull(intentoMija.get(), "otra instancia pudo abrir la bóveda durante la compactación");
+        assertInstanceOf(ErrorBoveda.BovedaEnUso.class, intentoMija.get().error());
+        assertFalse(Files.exists(bloqueoMija), "el .lock se borra al terminar");
+        try (ContenedorKipu contenedorMija = abrirYDesbloquear()) {
+            assertEquals(1, contenedorMija.manifest().entradasMija().size());
+        }
+    }
+
+    @Test
+    void elBloqueoSeBorraAunqueLaCompactacionFalle() throws IOException {
+        try (ContenedorKipu contenedorMija = crear()) {
+            contenedorMija.agregar(List.of(new Origen(archivo("uno.bin", 5000), "uno.bin")));
+        }
+        try (ContenedorKipu contenedorMija =
+                ContenedorKipu.abrir(bovedaMija, opciones(cortarEn(Interruptor.Paso.COMPACTACION_LISTA)))) {
+            contenedorMija.desbloquear(maestraMija);
+            assertThrows(CorteSimulado.class, contenedorMija::compactar);
+        }
+
+        assertFalse(Files.exists(carpetaMija.resolve("prueba.kipu.lock")));
+    }
+
+    @Test
+    void unBloqueoHuerfanoSeLimpiaAlAbrir() throws IOException {
+        crear().close();
+        Path bloqueoMija = carpetaMija.resolve("prueba.kipu.lock");
+        Files.writeString(bloqueoMija, "huérfano de una instancia que murió");
+
+        try (ContenedorKipu contenedorMija = abrirYDesbloquear()) {
+            assertTrue(contenedorMija.manifest().entradasMija().isEmpty());
+        }
+
+        assertFalse(Files.exists(bloqueoMija), "nadie lo tenía bloqueado: era huérfano");
+    }
+
+    @Test
+    void unBloqueoQueUnaInstanciaVivaTieneNoSeBorraYImpideAbrir() throws IOException {
+        crear().close();
+        Path bloqueoMija = carpetaMija.resolve("prueba.kipu.lock");
+        try (FileChannel vivoMija = FileChannel.open(bloqueoMija, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+                FileLock candadoMija = vivoMija.lock()) {
+            assertTrue(candadoMija.isValid());
+
+            ExcepcionBoveda errorMija = assertThrows(ExcepcionBoveda.class,
+                    () -> ContenedorKipu.abrir(bovedaMija, opciones(Interruptor.NINGUNO_MIJA)));
+
+            assertInstanceOf(ErrorBoveda.BovedaEnUso.class, errorMija.error());
+            assertTrue(Files.exists(bloqueoMija), "no se borra el bloqueo de una instancia viva");
+        }
+    }
+
+    /** Hallazgo de Jazzer (Fase 9): la pista de la Zona C no está autenticada; Long.MAX_VALUE desbordaba la suma. */
+    @Test
+    void unaPistaDeFooterAbsurdaSeIgnoraSinFallarConIoException() throws IOException {
+        try (ContenedorKipu contenedorMija = crear()) {
+            contenedorMija.agregar(List.of(new Origen(archivo("uno.bin", 100), "uno.bin")));
+        }
+        try (RandomAccessFile archivoMija = new RandomAccessFile(bovedaMija.toFile(), "rw")) {
+            archivoMija.seek(archivoMija.length());
+            archivoMija.write(new byte[100]); // basura tras el último footer: obliga a usar la pista y el barrido
+            for (long pistaMija : new long[] {Long.MAX_VALUE, Long.MAX_VALUE - 10, Long.MAX_VALUE - 32}) {
+                archivoMija.seek(HeaderCodec.OFFSET_ZONA_C_MIJA + 4);
+                archivoMija.writeLong(pistaMija);
+                try (ContenedorKipu contenedorMija = abrirYDesbloquear()) {
+                    assertEquals(1, contenedorMija.manifest().entradasMija().size());
+                }
+            }
         }
     }
 

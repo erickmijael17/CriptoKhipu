@@ -322,7 +322,7 @@ public final class AsistenteController implements Refrescable {
     private void elegirDestino() {
         FileChooser selectorMija = new FileChooser();
         selectorMija.setInitialFileName("boveda.kipu");
-        selectorMija.getExtensionFilters().add(new FileChooser.ExtensionFilter("CryptoKipu (*.kipu)", "*.kipu"));
+        selectorMija.getExtensionFilters().add(new FileChooser.ExtensionFilter("CriptoKhipu (*.kipu)", "*.kipu"));
         File archivoMija = selectorMija.showSaveDialog(uiMija.ventana());
         if (archivoMija == null) {
             return;

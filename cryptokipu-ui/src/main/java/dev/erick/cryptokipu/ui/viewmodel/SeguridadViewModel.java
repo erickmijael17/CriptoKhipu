@@ -1,5 +1,7 @@
 package dev.erick.cryptokipu.ui.viewmodel;
 
+import static dev.erick.cryptokipu.ui.Textos.t;
+
 import dev.erick.cryptokipu.app.casos.Compactar;
 import dev.erick.cryptokipu.app.casos.RegenerarTokens;
 import dev.erick.cryptokipu.app.casos.RotarCredenciales;
@@ -57,6 +59,23 @@ public final class SeguridadViewModel {
         HiloFx.exigirFuera();
         progresoMija.etapa("etapa.compactando", false);
         appMija.compactar().ejecutar(new Compactar.Comando(sesionMija));
+    }
+
+    /**
+     * Activar la autodestrucción (umbral &gt; 0) exige DOBLE confirmación: un aviso claro de que también destruye la
+     * bóveda para su dueño y, después, escribir una palabra. Desactivarla (0) no pide nada.
+     */
+    public static boolean exigeDobleConfirmacion(int nuevoUmbralMija) {
+        return nuevoUmbralMija > 0;
+    }
+
+    /** La palabra que hay que escribir en la segunda confirmación. */
+    public static String palabraConfirmacion() {
+        return t("seguridad.umbral.palabra");
+    }
+
+    public static boolean palabraCorrecta(String escritaMija) {
+        return escritaMija != null && escritaMija.strip().equalsIgnoreCase(palabraConfirmacion());
     }
 
     public IntegerProperty umbralProperty() {

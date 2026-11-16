@@ -14,6 +14,12 @@ poi = "5.5.1"
 junit = "6.1.3"
 jqwik = "1.10.2"
 archunit = "1.5.1"
+jazzer = "0.30.0"
+jacoco = "0.8.16"
+spotbugs = "4.10.5"
+findsecbugs = "1.14.0"
+pit = "1.30.2"
+pitjunit = "1.2.3"
 
 [libraries]
 # Criptografía (Fase 1)
@@ -37,5 +43,9 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 jqwik = { module = "net.jqwik:jqwik", version.ref = "jqwik" }
 archunit-junit = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+# Fuzzing (Fase 9)
+jazzer-junit = { module = "com.code-intelligence:jazzer-junit", version.ref = "jazzer" }
+# Análisis estático (Fase 9)
+findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
 
 # JavaFX se declara en cryptokipu-ui con el classifier de cada plataforma (sin el plugin de openjfx).

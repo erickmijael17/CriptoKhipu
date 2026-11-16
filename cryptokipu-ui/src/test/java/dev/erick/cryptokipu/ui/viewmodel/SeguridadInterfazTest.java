@@ -58,7 +58,7 @@ class SeguridadInterfazTest {
                 BancoUi.enHiloFx(() -> asistenteMija.crear(ProgresoOperacion.NINGUNO_MIJA)));
         assertFalse(Files.exists(carpetaMija.resolve("otra.kipu")), "No debe haber derivado ni escrito nada");
 
-        DesbloqueoViewModel desbloqueoMija = new DesbloqueoViewModel(appMija);
+        DesbloqueoViewModel desbloqueoMija = BancoUi.desbloqueoSinEspera(appMija);
         desbloqueoMija.rutaProperty().set(bovedaMija);
         assertInstanceOf(IllegalStateException.class,
                 BancoUi.enHiloFx(() -> desbloqueoMija.desbloquear(c(F1_MIJA), c(F2_MIJA), c(F3_MIJA))));
@@ -75,7 +75,7 @@ class SeguridadInterfazTest {
     @Test
     void cualquierFactorIncorrectoProduceElMismoMensaje() throws Exception {
         cerrarCreada();
-        DesbloqueoViewModel desbloqueoMija = new DesbloqueoViewModel(appMija);
+        DesbloqueoViewModel desbloqueoMija = BancoUi.desbloqueoSinEspera(appMija);
         desbloqueoMija.rutaProperty().set(bovedaMija);
         List<String> mensajesMija = new ArrayList<>();
         String[][] intentosMija = {
@@ -135,7 +135,7 @@ class SeguridadInterfazTest {
         char[] tokenMija = creadaMija.tokensMija().getFirst().formatear();
         char[] copiaTokenMija = tokenMija.clone();
         cerrarCreada();
-        DesbloqueoViewModel desbloqueoMija = new DesbloqueoViewModel(appMija);
+        DesbloqueoViewModel desbloqueoMija = BancoUi.desbloqueoSinEspera(appMija);
         desbloqueoMija.rutaProperty().set(bovedaMija);
         EstadoApp estadoMija = new EstadoApp(appMija);
         SesionBoveda sesionMija = desbloqueoMija.recuperar(tokenMija, c(F1_MIJA));
@@ -170,7 +170,7 @@ class SeguridadInterfazTest {
             seguridadMija.cambiarUmbral(creadaMija.sesionMija(), vigentesMija, 5, ProgresoOperacion.NINGUNO_MIJA);
         }
         cerrarCreada();
-        DesbloqueoViewModel desbloqueoMija = new DesbloqueoViewModel(appMija);
+        DesbloqueoViewModel desbloqueoMija = BancoUi.desbloqueoSinEspera(appMija);
         desbloqueoMija.rutaProperty().set(bovedaMija);
         desbloqueoMija.aplicar(desbloqueoMija.inspeccionar());
         assertTrue(desbloqueoMija.avisoIntentosProperty().get().contains("5"),

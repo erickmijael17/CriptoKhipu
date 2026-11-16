@@ -120,8 +120,11 @@ public final class GestorSlots {
     /** {@code KEK_i = HKDF(K_F1 ‖ token_i, info="ckp/v1/token-slot")}. */
     public static SecureBytes kekToken(SecureBytes claveF1Mija, TokenRecuperacion tokenMija) {
         byte[] tokenBytesMija = tokenMija.bytesAscii();
-        byte[] materialMija = ByteBuffer.allocate(claveF1Mija.longitud() + tokenBytesMija.length)
-                .put(claveF1Mija.bytes()).put(tokenBytesMija).array();
+        byte[] materialMija = claveF1Mija.conBytes(f1BytesMija -> {
+            byte[] juntosMija = ByteBuffer.allocate(f1BytesMija.length + tokenBytesMija.length)
+                    .put(f1BytesMija).put(tokenBytesMija).array();
+            return juntosMija;
+        });
         try (SecureBytes ikmMija = SecureBytes.envolver(materialMija)) {
             return HkdfDeriver.derivar(ikmMija, null, INFO_TOKEN_MIJA.getBytes(StandardCharsets.UTF_8), 32);
         } finally {

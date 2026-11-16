@@ -42,7 +42,8 @@ class CliPuntaAPuntaTest {
     }
 
     private Resultado kipu(String entradaMija, String... argumentosMija) throws IOException, InterruptedException {
-        List<String> comandoMija = new ArrayList<>(List.of(java(), "-cp", System.getProperty("kipu.classpath"),
+        List<String> comandoMija = new ArrayList<>(List.of(java(), "--enable-native-access=ALL-UNNAMED", "-cp",
+                System.getProperty("kipu.classpath"),
                 "dev.erick.cryptokipu.cli.Main"));
         comandoMija.addAll(List.of(argumentosMija));
         return lanzar(comandoMija, entradaMija);
@@ -147,7 +148,7 @@ class CliPuntaAPuntaTest {
         Path jlinkMija = Path.of(System.getProperty("java.home"), "bin", WINDOWS_MIJA ? "jlink.exe" : "jlink");
         Resultado enlazadoMija = lanzar(List.of(jlinkMija.toString(), "--module-path",
                 String.join(File.pathSeparator, rutaModulosMija), "--add-modules", "dev.erick.cryptokipu.cli",
-                "--ignore-signing-information", "--strip-debug", "--no-header-files", "--no-man-pages",
+                "--ignore-signing-information", "--add-options=--enable-native-access=dev.erick.cryptokipu.core", "--strip-debug", "--no-header-files", "--no-man-pages",
                 "--output", imagenMija.toString()), "");
         assertEquals(0, enlazadoMija.codigoMija(), enlazadoMija.erroresMija() + enlazadoMija.salidaMija());
 
@@ -155,7 +156,7 @@ class CliPuntaAPuntaTest {
         Resultado versionMija = lanzar(List.of(javaImagenMija.toString(), "-m",
                 "dev.erick.cryptokipu.cli/dev.erick.cryptokipu.cli.Main", "--version"), "");
         assertEquals(0, versionMija.codigoMija(), versionMija.erroresMija());
-        assertTrue(versionMija.salidaMija().contains("CryptoKipu"));
+        assertTrue(versionMija.salidaMija().contains("CriptoKhipu"));
 
         Path llaveMija = carpetaMija.resolve("k.kipukey");
         assertEquals(0, lanzar(List.of(javaImagenMija.toString(), "-m",
@@ -180,7 +181,7 @@ class CliPuntaAPuntaTest {
         }
         byte[] antesMija = Files.readAllBytes(bovedaMija);
 
-        Process procesoMija = new ProcessBuilder(java(), "-cp", System.getProperty("kipu.classpath"),
+        Process procesoMija = new ProcessBuilder(java(), "--enable-native-access=ALL-UNNAMED", "-cp", System.getProperty("kipu.classpath"),
                 "dev.erick.cryptokipu.cli.Main", "add", "--secretos-stdin", bovedaMija.toString(), grandeMija.toString())
                 .directory(carpetaMija.toFile()).start();
         try (OutputStream stdinMija = procesoMija.getOutputStream()) {

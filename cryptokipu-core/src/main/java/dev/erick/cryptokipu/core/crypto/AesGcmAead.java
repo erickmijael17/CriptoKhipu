@@ -57,7 +57,7 @@ public final class AesGcmAead {
             throw new IllegalArgumentException("El nonce debe medir 12 B");
         }
         Cipher cifradorMija = Cipher.getInstance(TRANSFORMACION_MIJA);
-        cifradorMija.init(modoMija, new SecretKeySpec(claveMija.bytes(), "AES"),
+        cifradorMija.init(modoMija, claveMija.conBytes(bytesMija -> new SecretKeySpec(bytesMija, "AES")),
                 new GCMParameterSpec(LONGITUD_TAG_MIJA * 8, nonceMija));
         if (datosAsociadosMija != null && datosAsociadosMija.length > 0) {
             cifradorMija.updateAAD(datosAsociadosMija);

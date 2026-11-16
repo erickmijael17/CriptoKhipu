@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Falsos positivos de SpotBugs/FindSecBugs. CADA exclusión lleva su justificación escrita. -->
+<FindBugsFilter>
+</FindBugsFilter>

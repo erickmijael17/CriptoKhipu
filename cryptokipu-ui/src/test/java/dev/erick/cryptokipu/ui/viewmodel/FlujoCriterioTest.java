@@ -64,7 +64,7 @@ class FlujoCriterioTest {
         assertTrue(creadaMija.sesionMija().cerrada());
 
         // 3. Reabrir con las credenciales y extraer el video: idéntico al original.
-        DesbloqueoViewModel desbloqueoMija = new DesbloqueoViewModel(appMija);
+        DesbloqueoViewModel desbloqueoMija = BancoUi.desbloqueoSinEspera(appMija);
         desbloqueoMija.rutaProperty().set(bovedaMija);
         desbloqueoMija.aplicar(desbloqueoMija.inspeccionar());
         assertFalse(desbloqueoMija.requiereLlaveProperty().get());

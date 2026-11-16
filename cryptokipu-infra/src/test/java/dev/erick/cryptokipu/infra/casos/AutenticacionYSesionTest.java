@@ -21,6 +21,7 @@ import dev.erick.cryptokipu.core.auth.CambioCredenciales.CambioLlave;
 import dev.erick.cryptokipu.core.auth.ExcepcionValidacion;
 import dev.erick.cryptokipu.core.auth.ReglaIncumplida;
 import dev.erick.cryptokipu.core.auth.TokenRecuperacion;
+import dev.erick.cryptokipu.core.crypto.SecureBytes;
 import dev.erick.cryptokipu.core.error.ErrorBoveda;
 import dev.erick.cryptokipu.core.format.Header;
 import dev.erick.cryptokipu.core.format.HeaderCodec;
@@ -168,12 +169,15 @@ class AutenticacionYSesionTest {
     void trasCerrarLaSesionLaClaveMaestraQuedaEnCeroYTodoSeRechaza() throws IOException {
         bancoMija.crear();
         SesionBoveda sesionMija = bancoMija.abrir();
-        byte[] maestraMija = ((ContenedorKipu) sesionMija.contenedor()).conClaveMaestra(claveMija -> claveMija.bytes());
-        assertFalse(java.util.Arrays.equals(new byte[32], maestraMija));
+        // La clave vive fuera del heap (Fase 8): se guarda la referencia y, tras cerrar, ya no se puede leer.
+        SecureBytes maestraMija = ((ContenedorKipu) sesionMija.contenedor()).conClaveMaestra(claveMija -> claveMija);
+        assertFalse(maestraMija.estaCerrado());
+        assertFalse(java.util.Arrays.equals(new byte[32], maestraMija.bytes()));
 
         sesionMija.close();
 
-        assertArrayEquals(new byte[32], maestraMija);
+        assertTrue(maestraMija.estaCerrado());
+        assertThrows(IllegalStateException.class, maestraMija::bytes);
         assertTrue(sesionMija.cerrada());
         assertThrows(IllegalStateException.class, sesionMija::manifest);
         assertThrows(IllegalStateException.class,

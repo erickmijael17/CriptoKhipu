@@ -1,4 +1,4 @@
-# CryptoKipu
+# CriptoKhipu
 
 Cifrador de archivos de escritorio, 100% offline, escrito en Java 25. En desarrollo: ver [PLAN_IMPLEMENTACION.md](PLAN_IMPLEMENTACION.md).
 

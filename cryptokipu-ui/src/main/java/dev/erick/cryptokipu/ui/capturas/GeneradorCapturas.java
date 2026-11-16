@@ -81,7 +81,7 @@ public final class GeneradorCapturas extends Application {
         Tema.aplicar(AjustesViewModel.Tema.CLARO);
         uiMija.usarVentana(ventanaMija);
         escenaMija = CryptoKipuApp.escena(uiMija);
-        ventanaMija.setTitle("CryptoKipu");
+        ventanaMija.setTitle("CriptoKhipu");
         ventanaMija.setScene(escenaMija);
         ventanaMija.show();
         List<Path> muestrasMija = crearMuestras(temporalMija.resolve("muestras"));

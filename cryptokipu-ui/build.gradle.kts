@@ -42,6 +42,7 @@ dependencies {
     }
     // Las pruebas de la vista previa generan PDF y Word reales y usan el proveedor de visores directamente.
     testImplementation(project(":cryptokipu-visores"))
+    testImplementation(libs.jazzer.junit)
     testImplementation(libs.pdfbox)
     testImplementation(libs.poi.ooxml)
     implementation(libs.atlantafx) { exclude(group = "org.openjfx") }
@@ -56,16 +57,18 @@ sourceSets.main {
 
 val rutaEjecucionUi = sourceSets.main.get().runtimeClasspath
 val opcionesFx = listOf("--enable-native-access=javafx.graphics")
+// Ejecución real (ruta de módulos): el núcleo también necesita acceso nativo (VirtualLock/mlock).
+val opcionesEjecucion = OpcionesJvm.comunes + opcionesFx + OpcionesJvm.ACCESO_NATIVO_MODULOS
 
 // ./gradlew :cryptokipu-ui:ejecutarUi   (modo desarrollo: detector de bloqueos del hilo de JavaFX)
 tasks.register<JavaExec>("ejecutarUi") {
     group = "aplicación"
-    description = "Abre la interfaz de CryptoKipu."
+    description = "Abre la interfaz de CriptoKhipu."
     classpath = rutaEjecucionUi
     mainModule = "dev.erick.cryptokipu.ui"
     mainClass = "dev.erick.cryptokipu.ui.Launcher"
     javaLauncher = javaToolchains.launcherFor(java.toolchain)
-    jvmArgs(OpcionesJvm.comunes + opcionesFx + "-Dcryptokipu.desarrollo=true")
+    jvmArgs(opcionesEjecucion + "-Dcryptokipu.desarrollo=true")
 }
 
 // ./gradlew :cryptokipu-ui:generarCapturas   (escribe docs/capturas/*.png; necesita pantalla)
@@ -76,9 +79,13 @@ tasks.register<JavaExec>("generarCapturas") {
     mainModule = "dev.erick.cryptokipu.ui"
     mainClass = "dev.erick.cryptokipu.ui.capturas.GeneradorCapturas"
     javaLauncher = javaToolchains.launcherFor(java.toolchain)
-    jvmArgs(OpcionesJvm.comunes + opcionesFx)
+    jvmArgs(opcionesEjecucion)
     args(rootProject.layout.projectDirectory.dir("docs/capturas").asFile.absolutePath)
 }
+
+registrarObjetivosFuzz(listOf(
+    "dev.erick.cryptokipu.ui.viewmodel.FuzzImagenTest.leerCabeceraNuncaLanzaYRespetaElTope",
+))
 
 // Pruebas sin toolkit (ViewModels): en la JVM de `test` nunca se inicia JavaFX.
 tasks.test {
@@ -87,7 +94,15 @@ tasks.test {
 }
 
 // Pruebas con toolkit (@Tag("toolkit")) en su propia JVM: se omiten sin pantalla; en CI de Linux, xvfb-run.
+// Módulos de la imagen jlink de la interfaz (prueba de arranque en frío): dependencias de ejecución + el jar propio.
+val rutaModulosUi = provider {
+    (configurations.runtimeClasspath.get().files + tasks.jar.get().archiveFile.get().asFile)
+        .joinToString(File.pathSeparator)
+}
+
 val pruebasToolkit = tasks.register<Test>("pruebasToolkit") {
+    dependsOn(tasks.jar)
+    jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dui.rutaModulos=" + rutaModulosUi.get()) })
     group = "verification"
     description = "Pruebas que necesitan el toolkit de JavaFX (pantalla real o Xvfb)."
     testClassesDirs = sourceSets.test.get().output.classesDirs
@@ -101,9 +116,11 @@ tasks.check { dependsOn(pruebasToolkit) }
 // ./gradlew :cryptokipu-ui:opcionesJpackage  → una opción de `--java-options` por línea (modo portátil).
 tasks.register("opcionesJpackage") {
     group = "documentación"
-    description = "Imprime las opciones de JVM del modo portátil para jpackage --java-options."
-    val opcionesMija = OpcionesJvm.portatil
+    description = "Imprime la identidad del paquete y las opciones de JVM del modo portátil para jpackage."
+    val opcionesMija = OpcionesJvm.portatil + opcionesFx
+    val identidadMija = IdentidadPaquete.argumentos
     doLast {
+        identidadMija.chunked(2).forEach { println(it.joinToString(" ")) }
         opcionesMija.forEach { println("--java-options \"$it\"") }
     }
 }

@@ -109,7 +109,7 @@ public final class InicioController {
     private void abrir() {
         FileChooser selectorMija = new FileChooser();
         selectorMija.setTitle(t("inicio.abrir").replace("_", ""));
-        selectorMija.getExtensionFilters().add(new FileChooser.ExtensionFilter("CryptoKipu (*.kipu)", "*.kipu"));
+        selectorMija.getExtensionFilters().add(new FileChooser.ExtensionFilter("CriptoKhipu (*.kipu)", "*.kipu"));
         File archivoMija = selectorMija.showOpenDialog(uiMija.ventana());
         if (archivoMija != null) {
             abrirBoveda(archivoMija.toPath());

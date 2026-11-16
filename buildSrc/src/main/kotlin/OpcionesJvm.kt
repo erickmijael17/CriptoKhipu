@@ -6,6 +6,15 @@
  */
 object OpcionesJvm {
 
+    /** Módulo con código FFM (Fase 8: claves fuera del heap + VirtualLock/mlock). */
+    const val MODULO_NATIVO = "dev.erick.cryptokipu.core"
+
+    /** Ejecución en la ruta de módulos (`run`, jpackage): el acceso nativo se concede al módulo por nombre. */
+    const val ACCESO_NATIVO_MODULOS = "--enable-native-access=$MODULO_NATIVO"
+
+    /** Ejecución en classpath (pruebas, JMH): el código del núcleo está en el módulo sin nombre. */
+    const val ACCESO_NATIVO_CLASSPATH = "--enable-native-access=ALL-UNNAMED"
+
     /** Opciones comunes a cualquier ejecución de CryptoKipu. */
     val comunes: List<String> = listOf(
         "-XX:-UsePerfData",                // no escribe hsperfdata en %TEMP%
@@ -21,7 +30,7 @@ object OpcionesJvm {
      *
      * En `jpackage` la carpeta será `$APPDIR/..` (expandida por el lanzador).
      */
-    fun conCarpeta(carpeta: String): List<String> = comunes + listOf(
+    fun conCarpeta(carpeta: String): List<String> = comunes + ACCESO_NATIVO_CLASSPATH + listOf(
         "-XX:ErrorFile=$carpeta/logs/hs_err_%p.log",
         "-Djava.io.tmpdir=$carpeta/tmp",
     )
@@ -31,10 +40,27 @@ object OpcionesJvm {
      * de jpackage (en una línea de comandos hay que escaparlo: `\$APPDIR`). Todo lo que la JVM pueda escribir
      * (temporales, log de caídas) queda junto a la app, nunca en el anfitrión.
      */
-    val portatil: List<String> = comunes + listOf(
+    val portatil: List<String> = comunes + ACCESO_NATIVO_MODULOS + listOf(
         "-XX:ErrorFile=\$APPDIR/logs/hs_err_%p.log",
         "-Djava.io.tmpdir=\$APPDIR/tmp",
         "-Djava.awt.headless=true",        // Java2D de PDFBox/POI sin pantalla; JavaFX no depende de AWT
         "-Dcryptokipu.appdir=\$APPDIR",    // la app busca portable.properties aquí y en la carpeta superior
+    )
+}
+
+/**
+ * Identidad del paquete de `jpackage` (ADR-014). El nombre es el comercial; el UUID de actualización de Windows y el
+ * identificador de macOS se fijan UNA vez: si cambian, una versión nueva convive con la vieja en vez de reemplazarla.
+ */
+object IdentidadPaquete {
+    const val NOMBRE = "CriptoKhipu"
+    const val WIN_UPGRADE_UUID = "7fd13518-ad1c-4405-8186-0957ebbe6a35"
+    const val MAC_PACKAGE_ID = "dev.erick.criptokhipu"
+
+    /** Opciones de identidad, una por elemento, tal como se pasan a `jpackage`. */
+    val argumentos: List<String> = listOf(
+        "--name", NOMBRE,
+        "--win-upgrade-uuid", WIN_UPGRADE_UUID,
+        "--mac-package-identifier", MAC_PACKAGE_ID,
     )
 }

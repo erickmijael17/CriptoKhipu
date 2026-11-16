@@ -92,6 +92,31 @@ diacríticos, minúsculas, espacios colapsados). Token: 25 símbolos Base32 Croc
 | Bloques | `HKDF(MK, salt=fileId, "ckp/v1/file")` | `0⁴ ‖ índice (8 B)`; `AAD = fileId ‖ índice ‖ esÚltimo` |
 | Header MAC | `HKDF(MK, "ckp/v1/header-mac")` | — |
 
+### 4.1 Detalles exactos de las derivaciones (completados en la Fase 9)
+
+Un lector independiente (`tools/lector_kipu.py`, Python con `cryptography` y `argon2-cffi`) descifra la bóveda golden
+usando solo esta especificación. Al escribirlo se vio que faltaban estos detalles, que ahora son parte del formato:
+
+- **Argon2id:** versión `0x13`, salida de **32 B**. La entrada es el mensaje (*password*); la sal es `sal₀` (slot 0) o
+  `salTokens` (`K_F1`); `m` en KiB, `t` y `p` de la Zona A (`lanes = threads = p`). El «secreto» de Argon2 (parámetro `K`,
+  *pepper*) del slot 0 es **SHA-256 de los bytes del archivo de la llave** (F4); sin llave no se pasa ninguno. No hay datos
+  asociados (`X`). `K_F1 = Argon2id(len‖F1, salTokens)` no lleva secreto.
+- **HKDF-SHA256 (RFC 5869):** salida de 32 B. Sin «salt» indicado se usa la sal por defecto del RFC (32 B en cero). Con
+  «salt = fileId» se usa el `fileId` de 16 B. `IKM` es la clave en bruto (`MK`, o `K_F1 ‖ token_i`).
+- **Token (`token_i`):** los **25 símbolos** en ASCII mayúsculas, sin el prefijo `CKP`, sin guiones y **sin** el carácter de
+  verificación (el 26.º).
+- **Normalización de F3 (`normalizacionF3 = 1`):** (1) NFD; (2) quitar los caracteres de categoría Unicode `Mn`, `Mc` y `Me`;
+  (3) pasar a minúsculas (mapeo simple de Unicode, sin configuración regional); (4) repetir (1) y (2); (5) quitar espacios
+  iniciales y finales y reemplazar cada secuencia de espacios (cualquier espacio Unicode) por un solo espacio U+0020.
+  Para el prefijo de longitud se cuentan los bytes UTF-8 del resultado.
+- **AAD del slot 0:** `Zona A (103 B) ‖ 0x00 ‖ 0x01 ‖ requiereLlave (1 B) ‖ versiónPolítica (2 B, = 1) ‖ umbral (4 B)`; la de un
+  slot de token `i`: `Zona A ‖ i (1 B) ‖ 0x02`.
+- **Bloques de archivo:** el texto se parte en bloques de 1 MiB; cada uno se cifra a «bloque + 16 B de tag». El **último**
+  bloque lleva `esÚltimo = 1` y es el que tiene menos de 1 MiB **o** el que completa exactamente el archivo (un archivo de
+  exactamente 1 MiB ocupa **un** bloque; no hay un bloque vacío de relleno). Un archivo vacío ocupa un solo bloque de 16 B
+  (solo el tag). `nonce = 0x00000000 ‖ índice (8 B)`.
+- **HeaderMAC:** `HMAC-SHA256(K_hdr, header[0, 768))`, comparado en tiempo constante.
+
 ## 5. Manifest
 
 En disco: `nonce (12 B) ‖ AES-256-GCM(K_manifest, texto) (incluye tag)`.
@@ -136,3 +161,11 @@ Compactar: copiar los blobs vivos (sin recifrar) a `<ruta>.tmp` → `fsync` → 
 1. Abrir con las reglas de la versión del header.
 2. Reenvolver la MK con la política nueva y reescribir ambos headers (respaldo primero).
 3. Recifrar los bloques solo si cambia el AEAD.
+
+## 9. Compatibilidad y verificación
+
+- **Bóveda golden v1** (`cryptokipu-infra/src/test/resources/golden/v1`): una bóveda real con credenciales, llave y tokens
+  conocidos. `GoldenV1Test` la abre en cada build y compara el SHA-256 del contenido: ningún cambio puede romper las bóvedas
+  existentes sin que el build falle. Si cambia el formato nace `golden/v2` y `v1` se **conserva**.
+- **Lector independiente** (`tools/lector_kipu.py`): descifra esa misma bóveda sin código del proyecto, solo con esta
+  especificación. No implementa la búsqueda hacia atrás del footer (solo el caso normal).

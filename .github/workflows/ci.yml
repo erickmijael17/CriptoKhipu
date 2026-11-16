@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Fuzzing largo (Jazzer) una vez por semana: la regresión corta ya corre en cada `check`.
+  schedule:
+    - cron: "0 5 * * 0"
 
 permissions:
   contents: read
@@ -39,3 +42,85 @@ jobs:
       - name: Build y verificaciones (Checkstyle Mija, ArchUnit, pruebas)
         if: runner.os != 'Linux'
         run: ./gradlew check --console=plain
+
+      # Fase 9: SpotBugs + FindSecBugs, regresión de fuzzing y la bóveda golden v1 corren dentro de `check`.
+      - name: Reportes (cobertura JaCoCo, SpotBugs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-${{ matrix.os }}
+          path: |
+            **/build/reports/jacoco
+            **/build/reports/spotbugs
+          if-no-files-found: ignore
+
+  mutacion:
+    # PIT (mutaciones) sobre core.crypto, core.format y core.auth; el umbral mínimo está en cryptokipu-core/build.gradle.kts.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x ./gradlew
+      - name: Mutaciones (PIT)
+        run: ./gradlew :cryptokipu-core:pitest --console=plain
+      - name: Reporte de PIT
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-pit
+          path: cryptokipu-core/build/reports/pitest
+
+  reproducible:
+    # Dos builds limpios deben dar los mismos SHA-256 en todos los JAR.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x ./gradlew
+      - run: python3 tools/verificar_reproducible.py
+
+  vulnerabilidades:
+    # SOLO en CI (necesita red para consultar OSV); la aplicación sigue siendo 100% offline.
+    # Falla ante cualquier vulnerabilidad con CVSS >= 7.0 (alta o crítica) en las dependencias bloqueadas.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Instalar OSV-Scanner
+        run: go install github.com/google/osv-scanner/v2/cmd/osv-scanner@latest
+      - name: Escanear los gradle.lockfile
+        run: |
+          "$(go env GOPATH)/bin/osv-scanner" scan source --recursive --format json --output osv.json . || true
+          test -s osv.json
+      - name: Umbral (alta o crítica)
+        run: python3 tools/osv_umbral.py osv.json
+
+  fuzz-largo:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x ./gradlew
+      - name: Fuzzing real (Jazzer)
+        run: ./gradlew fuzzLargo --continue --console=plain
+      - name: Entradas que causaron caídas
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: caidas-fuzzing
+          path: "**/build/fuzz/crash-*"

@@ -18,7 +18,9 @@ public interface Interruptor {
         FOOTER_ESCRITO,
         RESPALDO_ESCRITO,
         PRIMARIO_ESCRITO,
-        COMPACTACION_LISTA
+        COMPACTACION_LISTA,
+        /** Compactación: el archivo nuevo ya reemplazó al viejo; aún no se reabre ni se bloquea el principal. */
+        ARCHIVO_REEMPLAZADO
     }
 
     void en(Paso pasoMija) throws IOException;

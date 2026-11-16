@@ -43,7 +43,7 @@ public class Argon2Benchmark {
     @Benchmark
     public byte[] derivar() {
         try (SecureBytes claveMija = Argon2idKdf.derivar(entradaMija, salMija, secretoMija, parametrosMija)) {
-            return claveMija.bytes().clone();
+            return claveMija.bytes();
         }
     }
 }

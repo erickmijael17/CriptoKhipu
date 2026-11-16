@@ -34,6 +34,7 @@
     </VBox>
 
     <Label fx:id="errorMija" styleClass="error-credenciales" wrapText="true"/>
+    <Label fx:id="esperaMija" styleClass="aviso" wrapText="true"/>
     <HBox spacing="12" alignment="CENTER_LEFT">
         <Button fx:id="abrirMija" text="%desbloqueo.abrir" onAction="#abrir" mnemonicParsing="true"
                 styleClass="accent" defaultButton="true"/>

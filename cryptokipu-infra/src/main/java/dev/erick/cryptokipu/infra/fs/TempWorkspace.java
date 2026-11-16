@@ -100,9 +100,25 @@ public final class TempWorkspace implements AutoCloseable {
         }
     }
 
-    private synchronized void borrarSilencioso() {
+    /**
+     * Cierra y borra la carpeta como {@link #close()}, pero informa del resultado: {@code false} si algo no se pudo
+     * borrar (típicamente una aplicación externa con un archivo abierto) y la carpeta queda para el próximo inicio.
+     * La interfaz lo usa al bloquear para avisar al usuario.
+     */
+    public synchronized boolean cerrarConfirmando() {
+        boolean limpioMija = borrarSilencioso();
+        try {
+            Runtime.getRuntime().removeShutdownHook(ganchoMija);
+        } catch (IllegalStateException _) {
+            // La JVM ya está terminando: el gancho se ejecuta solo.
+        }
+        return limpioMija;
+    }
+
+    /** @return {@code true} si la carpeta ya no existe al terminar (o ya estaba cerrada y borrada) */
+    private synchronized boolean borrarSilencioso() {
         if (cerradoMija) {
-            return;
+            return !Files.exists(carpetaMija);
         }
         cerradoMija = true;
         try {
@@ -116,7 +132,7 @@ public final class TempWorkspace implements AutoCloseable {
         for (int intentoMija = 1; intentoMija <= INTENTOS_BORRADO_MIJA; intentoMija++) {
             try {
                 borrarRecursivo(carpetaMija);
-                return;
+                return true;
             } catch (IOException _) {
                 if (intentoMija < INTENTOS_BORRADO_MIJA) {
                     try {
@@ -130,6 +146,7 @@ public final class TempWorkspace implements AutoCloseable {
         }
         REGISTRO_MIJA.log(System.Logger.Level.WARNING,
                 "No se pudo borrar la carpeta temporal privada (archivo en uso); se limpiará al próximo inicio");
+        return false;
     }
 
     private void exigirAbierto() {

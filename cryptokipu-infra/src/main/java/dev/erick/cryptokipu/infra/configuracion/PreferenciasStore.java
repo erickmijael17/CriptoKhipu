@@ -23,7 +23,7 @@ import java.util.Properties;
  */
 public final class PreferenciasStore {
 
-    public enum Clave { TEMA, IDIOMA, AUTO_BLOQUEO_MINUTOS, PERFIL_ARGON2, RECIENTES, RECIENTES_ACTIVOS }
+    public enum Clave { TEMA, IDIOMA, AUTO_BLOQUEO_MINUTOS, BLOQUEAR_AL_MINIMIZAR, PERFIL_ARGON2, RECIENTES, RECIENTES_ACTIVOS }
 
     private static final String ARCHIVO_MIJA = "preferencias.properties";
     private static final int MAXIMO_RECIENTES_MIJA = 10;
@@ -133,7 +133,7 @@ public final class PreferenciasStore {
         Files.createDirectories(archivoMija.getParent());
         Path temporalMija = archivoMija.resolveSibling(ARCHIVO_MIJA + ".tmp");
         try (OutputStream salidaMija = Files.newOutputStream(temporalMija)) {
-            propiedadesMija.store(salidaMija, "CryptoKipu: preferencias (sin credenciales ni nombres de archivos internos)");
+            propiedadesMija.store(salidaMija, "CriptoKhipu: preferencias (sin credenciales ni nombres de archivos internos)");
         }
         Files.move(temporalMija, archivoMija, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
     }

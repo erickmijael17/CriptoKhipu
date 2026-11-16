@@ -10,6 +10,9 @@ import dev.erick.cryptokipu.ui.viewmodel.DesbloqueoViewModel;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -19,6 +22,7 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import javafx.util.Duration;
 
 /**
  * Desbloqueo. Los campos se leen carácter por carácter y se limpian ANTES de derivar (en el hilo virtual). Cualquier
@@ -28,6 +32,7 @@ public final class DesbloqueoController implements Refrescable {
 
     private final ContenedorUi uiMija;
     private final DesbloqueoViewModel vmMija;
+    private final Timeline cuentaRegresivaMija;
 
     @FXML
     private Label nombreMija;
@@ -56,6 +61,8 @@ public final class DesbloqueoController implements Refrescable {
     @FXML
     private Label errorMija;
     @FXML
+    private Label esperaMija;
+    @FXML
     private Button abrirMija;
     @FXML
     private Hyperlink cambiarModoMija;
@@ -63,6 +70,7 @@ public final class DesbloqueoController implements Refrescable {
     public DesbloqueoController(ContenedorUi uiMija) {
         this.uiMija = uiMija;
         this.vmMija = uiMija.desbloqueo();
+        this.cuentaRegresivaMija = new Timeline(new KeyFrame(Duration.seconds(1), _ -> vmMija.actualizarEspera()));
     }
 
     @FXML
@@ -73,7 +81,7 @@ public final class DesbloqueoController implements Refrescable {
         CampoSecreto.endurecer(tokenMija, t("desbloqueo.token"));
         CampoSecreto.endurecer(f1TokenMija, t("desbloqueo.f1"));
         for (var nodoMija : new javafx.scene.Node[] {credencialesMija, recuperacionMija, filaLlaveMija, errorMija,
-                avisoIntentosMija}) {
+                avisoIntentosMija, esperaMija}) {
             nodoMija.managedProperty().bind(nodoMija.visibleProperty());
         }
         credencialesMija.visibleProperty().bind(vmMija.modoTokenProperty().not());
@@ -83,6 +91,13 @@ public final class DesbloqueoController implements Refrescable {
                 .then(t("desbloqueo.usarCredenciales")).otherwise(t("desbloqueo.usarToken")));
         errorMija.textProperty().bind(vmMija.mensajeErrorProperty());
         errorMija.visibleProperty().bind(vmMija.mensajeErrorProperty().isNotEmpty());
+        // Retardo creciente (Fase 8): "Abrir" queda deshabilitado con cuenta regresiva visible, y también si la
+        // bóveda fue destruida. Una revisión por segundo mantiene la cuenta al día.
+        esperaMija.textProperty().bind(vmMija.avisoEsperaProperty());
+        esperaMija.visibleProperty().bind(vmMija.avisoEsperaProperty().isNotEmpty());
+        abrirMija.disableProperty().bind(vmMija.segundosEsperaProperty().greaterThan(0).or(vmMija.destruidaProperty()));
+        cuentaRegresivaMija.setCycleCount(Animation.INDEFINITE);
+        cuentaRegresivaMija.play();
         avisoIntentosMija.textProperty().bind(vmMija.avisoIntentosProperty());
         avisoIntentosMija.visibleProperty().bind(vmMija.avisoIntentosProperty().isNotEmpty());
         llaveElegidaMija.textProperty().bind(Bindings.createStringBinding(() -> vmMija.rutaLlaveProperty().get() == null
@@ -98,6 +113,7 @@ public final class DesbloqueoController implements Refrescable {
         vmMija.mensajeErrorProperty().set("");
         Path rutaMija = vmMija.rutaProperty().get();
         nombreMija.setText(rutaMija == null ? "" : rutaMija.toString());
+        vmMija.actualizarEspera();
         inspeccionar();
     }
 
@@ -105,7 +121,6 @@ public final class DesbloqueoController implements Refrescable {
         uiMija.ejecutor().ejecutar(_ -> vmMija.inspeccionar(), infoMija -> {
             vmMija.aplicar(infoMija);
             uiMija.seguridad().umbralProperty().set(infoMija.umbralAutodestruccionMija());
-            abrirMija.setDisable(infoMija.destruidaMija());
             (vmMija.modoTokenProperty().get() ? tokenMija : f1Mija).requestFocus();
         }, vmMija::mostrarError);
     }
@@ -159,6 +174,7 @@ public final class DesbloqueoController implements Refrescable {
 
     private void fallo(Throwable errorMija) {
         vmMija.mostrarError(errorMija);
+        vmMija.actualizarEspera(); // si fue una credencial incorrecta, arranca la cuenta regresiva
         String mensajeMija = vmMija.mensajeErrorProperty().get();
         // Actualiza el aviso de intentos restantes sin borrar el mensaje de error.
         uiMija.ejecutor().ejecutar(_ -> vmMija.inspeccionar(), infoMija -> {
@@ -166,7 +182,6 @@ public final class DesbloqueoController implements Refrescable {
             if (!infoMija.destruidaMija()) {
                 vmMija.mensajeErrorProperty().set(mensajeMija);
             }
-            abrirMija.setDisable(infoMija.destruidaMija());
         }, _ -> vmMija.mensajeErrorProperty().set(mensajeMija));
     }
 

@@ -33,7 +33,7 @@ public final class LlaveSeguridad {
      */
     public static byte[] huellaBytes(Path archivoMija, ReporteProgreso progresoMija) throws IOException {
         try (SecureBytes huellaMija = huella(archivoMija, progresoMija)) {
-            return huellaMija.bytes().clone();
+            return huellaMija.bytes();
         }
     }
 

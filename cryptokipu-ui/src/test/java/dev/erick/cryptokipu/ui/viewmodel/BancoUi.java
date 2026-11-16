@@ -10,8 +10,10 @@ import dev.erick.cryptokipu.infra.storage.PoliticaDestino;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 
 /** Utilidades de las pruebas de ViewModels: bóvedas reales con el perfil Ligero (Argon2id de 64 MiB). */
 final class BancoUi {
@@ -27,6 +29,16 @@ final class BancoUi {
     static Contenedor contenedor(Path carpetaMija) {
         return new Contenedor(ContenedorKipu.Opciones.porDefecto(),
                 PreferenciasStore.portatil(carpetaMija.resolve("preferencias")));
+    }
+
+    /**
+     * ViewModel de desbloqueo cuyo reloj salta 5 minutos en cada lectura: los tests que fallan varias veces seguidas
+     * (para comprobar mensajes) no chocan con el retardo creciente de la Fase 8.
+     */
+    static DesbloqueoViewModel desbloqueoSinEspera(Contenedor appMija) {
+        AtomicLong relojMija = new AtomicLong();
+        return new DesbloqueoViewModel(appMija, MemoriaDisponible::bytes,
+                () -> relojMija.addAndGet(Duration.ofMinutes(5).toNanos()));
     }
 
     static char[] c(String valorMija) {

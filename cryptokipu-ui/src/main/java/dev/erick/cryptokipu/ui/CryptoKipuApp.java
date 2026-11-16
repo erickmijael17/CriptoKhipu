@@ -12,9 +12,11 @@ import dev.erick.cryptokipu.ui.viewmodel.HiloFx;
 import dev.erick.cryptokipu.ui.vista.ShellController;
 import java.io.IOException;
 import javax.imageio.ImageIO;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -66,11 +68,40 @@ public final class CryptoKipuApp extends Application {
         ventanaMija.setMinHeight(600);
         ventanaMija.setScene(escena(uiMija));
         ventanaMija.setOnCloseRequest(this::alCerrar);
+        ventanaMija.iconifiedProperty().addListener((_, _, minimizadaMija) -> {
+            if (minimizadaMija) {
+                uiMija.autoBloqueo().alMinimizar(); // si está activado: bloquea (espera si hay algo en curso)
+            }
+        });
         ventanaMija.show();
+        medirArranque();
         if (DetectorBloqueos.activado()) {
             detectorMija = new DetectorBloqueos();
             detectorMija.start();
         }
+    }
+
+    /**
+     * Medición del arranque en frío (prueba de rendimiento de la Fase 9): con {@code -Dcryptokipu.arranqueArchivo=<ruta>}
+     * la aplicación escribe ese archivo cuando la ventana dibuja su primer cuadro y sale. No hace nada sin la propiedad.
+     */
+    private static void medirArranque() {
+        String archivoMija = System.getProperty("cryptokipu.arranqueArchivo");
+        if (archivoMija == null) {
+            return;
+        }
+        new AnimationTimer() {
+            @Override
+            public void handle(long ahoraMija) {
+                stop();
+                try {
+                    Files.writeString(Path.of(archivoMija), "listo");
+                } catch (IOException _) {
+                    // La prueba detecta la ausencia del archivo.
+                }
+                Platform.exit();
+            }
+        }.start();
     }
 
     /**
@@ -122,7 +153,8 @@ public final class CryptoKipuApp extends Application {
             detectorMija.stop();
         }
         if (uiMija != null) {
-            uiMija.estado().cerrar();
+            uiMija.estado().cerrar(); // también limpia el portapapeles si todavía contiene un token copiado
+            uiMija.guardiaPortapapeles().alBloquearOSalir();
         }
         if (portatilMija != null) {
             portatilMija.vaciarTemporales();

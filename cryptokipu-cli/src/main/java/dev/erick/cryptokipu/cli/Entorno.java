@@ -16,9 +16,18 @@ import java.util.Optional;
  * @param lectorConsolaMija  secretos desde la consola interactiva, si existe
  * @param terminalMija       si stdout es una terminal
  * @param cancelacionMija    progreso y cancelación (Ctrl+C)
+ * @param pausaMija          espera entre intentos fallidos de la consola interactiva (se sustituye en pruebas)
  */
 public record Entorno(Contenedor appMija, PrintStream salidaMija, PrintStream erroresMija, InputStream entradaMija,
-        Optional<LectorSecretos> lectorConsolaMija, Terminal terminalMija, Cancelacion cancelacionMija) {
+        Optional<LectorSecretos> lectorConsolaMija, Terminal terminalMija, Cancelacion cancelacionMija,
+        Pausa pausaMija) {
+
+    /** Entorno con la pausa real (dormir el hilo). */
+    public Entorno(Contenedor appMija, PrintStream salidaMija, PrintStream erroresMija, InputStream entradaMija,
+            Optional<LectorSecretos> lectorConsolaMija, Terminal terminalMija, Cancelacion cancelacionMija) {
+        this(appMija, salidaMija, erroresMija, entradaMija, lectorConsolaMija, terminalMija, cancelacionMija,
+                Pausa.REAL_MIJA);
+    }
 
     public Entorno {
         Objects.requireNonNull(appMija, "appMija");
@@ -28,5 +37,6 @@ public record Entorno(Contenedor appMija, PrintStream salidaMija, PrintStream er
         Objects.requireNonNull(lectorConsolaMija, "lectorConsolaMija");
         Objects.requireNonNull(terminalMija, "terminalMija");
         Objects.requireNonNull(cancelacionMija, "cancelacionMija");
+        Objects.requireNonNull(pausaMija, "pausaMija");
     }
 }

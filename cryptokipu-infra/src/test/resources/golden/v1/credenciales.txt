@@ -1,0 +1,5 @@
+F1=482915736028
+F2=Golden Vault 2026
+F3=El Cóndor pasa el Río
+llave=golden.kipukey
+formato=v1

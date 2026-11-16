@@ -32,7 +32,7 @@ public final class ExportadorTokensTxt {
         Objects.requireNonNull(fechaMija, "fechaMija");
         try (BufferedWriter escritorMija = Files.newBufferedWriter(destinoMija, StandardCharsets.UTF_8,
                 StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
-            escritorMija.write("CryptoKipu — tokens de recuperación de un solo uso");
+            escritorMija.write("CriptoKhipu — tokens de recuperación de un solo uso");
             escritorMija.newLine();
             escritorMija.write("Bóveda: " + nombreBovedaMija);
             escritorMija.newLine();

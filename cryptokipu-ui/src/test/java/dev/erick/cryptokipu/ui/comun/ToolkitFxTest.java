@@ -104,6 +104,67 @@ class ToolkitFxTest {
         });
     }
 
+    /** Fase 8: copiar un token sigue funcionando como texto normal y el guardia puede leerlo y limpiarlo. */
+    @Test
+    void copiarSinHistorialDejaElTextoLegibleYSePuedeLimpiar() throws Exception {
+        enFx(() -> {
+            PortapapelesFx portapapelesMija = new PortapapelesFx();
+            portapapelesMija.copiarSinHistorial("CKP-AAAAA-BBBBB");
+            assertEquals(java.util.Optional.of("CKP-AAAAA-BBBBB"), portapapelesMija.texto());
+            portapapelesMija.limpiar();
+            assertEquals(java.util.Optional.empty(), portapapelesMija.texto());
+            return null;
+        });
+    }
+
+    /**
+     * Fase 8, investigación del historial del portapapeles de Windows (Win+V): se enumeran los formatos que el
+     * SISTEMA tiene en el portapapeles (EnumClipboardFormats, desde otro proceso) y debe estar el que Windows
+     * documenta para excluir el contenido del historial y de la nube.
+     */
+    @Test
+    void windowsRecibeLosFormatosQueExcluyenElContenidoDelHistorial() throws Exception {
+        assumeTrue(System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win"), "solo Windows");
+        enFx(() -> {
+            new PortapapelesFx().copiarSinHistorial("CKP-AAAAA-BBBBB");
+            return null;
+        });
+        String guionMija = String.join("\n",
+                "Add-Type -TypeDefinition @'",
+                "using System; using System.Text; using System.Runtime.InteropServices;",
+                "public static class Cb {",
+                "  [DllImport(\"user32.dll\")] public static extern bool OpenClipboard(IntPtr h);",
+                "  [DllImport(\"user32.dll\")] public static extern bool CloseClipboard();",
+                "  [DllImport(\"user32.dll\")] public static extern uint EnumClipboardFormats(uint f);",
+                "  [DllImport(\"user32.dll\", CharSet=CharSet.Unicode)] public static extern int GetClipboardFormatName(uint f, StringBuilder s, int n);",
+                "  public static string Nombres() {",
+                "    var r = new StringBuilder();",
+                "    for (int i = 0; i < 20 && !OpenClipboard(IntPtr.Zero); i++) System.Threading.Thread.Sleep(100);",
+                "    uint f = 0;",
+                "    while ((f = EnumClipboardFormats(f)) != 0) { var s = new StringBuilder(256); if (GetClipboardFormatName(f, s, 256) > 0) r.Append(s).Append(';'); }",
+                "    CloseClipboard();",
+                "    return r.ToString();",
+                "  }",
+                "}",
+                "'@",
+                "[Cb]::Nombres()");
+        // Windows pierde las comillas dobles de los argumentos: el guion va a un archivo (en build/jvm-pruebas/tmp).
+        java.nio.file.Path guionArchivoMija = java.nio.file.Files.createTempFile("formatos-portapapeles", ".ps1");
+        java.nio.file.Files.writeString(guionArchivoMija, guionMija);
+        Process procesoMija = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy",
+                "Bypass", "-File", guionArchivoMija.toString()).redirectErrorStream(true).start();
+        String salidaMija = new String(procesoMija.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(procesoMija.waitFor(60, TimeUnit.SECONDS));
+        java.nio.file.Files.deleteIfExists(guionArchivoMija);
+        enFx(() -> {
+            Clipboard.getSystemClipboard().clear();
+            return null;
+        });
+        assertTrue(salidaMija.contains("ExcludeClipboardContentFromMonitorProcessing"), salidaMija);
+        assertTrue(salidaMija.contains("CanIncludeInClipboardHistory"), salidaMija);
+        assertTrue(salidaMija.contains("CanUploadToCloudClipboard"), salidaMija);
+    }
+
     @Test
     void sinMenuContextualYConTextoAccesibleSinSecreto() throws Exception {
         enFx(() -> {
